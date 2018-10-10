@@ -63,7 +63,9 @@ class LipDetector:
     def detect_landmarks(self, img):
         '''
         Use dlib to detect 48-67 lip landmarks
+
         '''
+        
         raise NotImplementedError(self.name + " detect_landmarks is not yet implemented")
 
     
