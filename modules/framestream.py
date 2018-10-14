@@ -21,9 +21,13 @@ class ImageStream:
 
 
     def next_frame(self):
+        if len(self.buffer) < 1:
+            self.buffer_frames()
         if len(self.buffer) > 0:
             self.lastIndex-=1
             return self.buffer.pop(0)
+        else:
+            return None
 
 
     def buffer_frames(self):
@@ -67,7 +71,7 @@ class VideoStream(ImageStream):
 
     def buffer_frames(self):
         if not self.stream.isOpened():
-            self.stream.open()
+            return None
         while self.stream.isOpened() and len(self.buffer) < self.BUFFER_SIZE:
             no_error, frame = self.stream.read()
             if no_error:
