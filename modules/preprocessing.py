@@ -63,17 +63,37 @@ class LipDetector:
     def detect_landmarks(self, img):
         '''
         Use dlib to detect 48-67 lip landmarks
-
+        Returns list of tuple of pixel cordinates
         '''
+        faceDetector = dlib.get_frontal_face_detector()
+        faces = faceDetector(img, 1) # get atleast one face
+        lipPoints = []
+        landmarks = self.model(img, faces[0]) # we take only one face bounding box
+        for i in range(48,68):
+            lipPoints.append(landmarks.part(i)) # extract `dlib.point`s 48-68 of jaw region
         
-        raise NotImplementedError(self.name + " detect_landmarks is not yet implemented")
+        lipBB = detect_bbox(img, landmarks)
+        lipDetection = dlib.full_object_detection(lipBB, lipPoints)
+        return lipDetection
 
     
-    def detect_bbox(self, img):
+    def detect_bbox(self, img, landmarks=None):
         '''
-        Use resnet or dlib to detect face bounding box
+            Use dlib to detect lip bounding box
         '''
-        raise NotImplementedError(self.name + " detect_bbox is not yet implemented")
+        if landmarks == None:
+            faceDetector = dlib.get_frontal_face_detector()
+            faces = faceDetector(img, 1) # get atleast one face
+            lipPoints = []
+            landmarks = self.model(img, faces[0]) # we take only one face bounding box
+        
+        lipBB = dlib.rectangle(
+            landmarks.part(48).x, # left
+            min([landmarks.part(52).y, landmarks.part(48).y, landmarks.part(54).y, landmarks.part(51).y, landmarks.part(52).y]), # top
+            landmarks.part(54).x, # right
+            max([landmarks.part(57).y, landmarks.part(48).y, landmarks.part(54).y, landmarks.part(56).y, landmarks.part(57).y]) # bottom
+        )
+        return lipBB
 
     
     def __str__(self):
