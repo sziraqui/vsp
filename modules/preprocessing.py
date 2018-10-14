@@ -4,28 +4,57 @@ import cv2 as cv
 import dlib
 import numpy as np
 
-
-class LipDetector:
-
-    def __init__(self, modelName="None"):
-        self.name = "LipDetector"
-        self.modelName = modelName
-        self.model = None
+'''
+    Common interface for lip detector models like dlib resnet etc
+    All methods must be implemented by a lip detector subclass
+'''
+class LipDetector(object):
     
-    
-    def create_dlib_model(self, datFilePath):
-        '''
-        set self.model to the created dlib model
-        '''
-        self.model = dlib.shape_predictor(datFilePath)
+    def __init__self(self):
+        raise NotImplementedError("Implement in subclass")
+    def train(self, trainParams):
+        raise NotImplementedError("Implement in subclass")
+    def test(self, testParams):
+        raise NotImplementedError("Implement in subclass")
+    def model_from_file(self, modelFilePath):
+        raise NotImplementedError("Implement in subclass")
+    def get_bbox(self, img):
+        raise NotImplementedError("Implement in subclass")
+    def __str__(self):
+        raise NotImplementedError("Implement in subclass")
+
+
+'''
+    Lip detector that uses dlib's 68-face-landmarks model
+'''
+class LipDetectorDlib(LipDetector):
+
+    def __init__(self, weightsFile=None):
         self.modelName = "dlib"
+        self.model = None
+        if weightsFile != None:
+            model_from_file(weightsFile)
+        else:
+            print('WARNING: weightsFile was not provided, you must set model yourself by calling model_from_file("path/to/file")')
+        self.faceDetector = dlib.get_frontal_face_detector()
+    
+
+    '''
+        set self.model to the created dlib model
+    '''
+    def model_from_file(self, datFilePath):
+        if os.path.exists(datFilePath) and os.path.isfile(datFilePath):
+            self.model = dlib.shape_predictor(datFilePath)
+        else:
+            raise IOError("Cannot access valid .dat file")
 
     
-    def train_dlib(self, facesLandmarksXml, trainParams, output=None):
-        '''
-            The xml file has annoted landmarks and relative location of images from xml file's root
-            Default values are same as those found in dlib samples and they do not seem to work
-        '''
+    '''
+        The xml file has annoted landmarks and relative location of images from xml file's root
+        Default values are same as those found in dlib samples and they do not seem to work
+    '''
+    def train(self, trainParams, output=None):
+        facesLandmarksXml = trainParams['annotationsFile']
         options = dlib.shape_predictor_training_options()
         options.oversampling_amount = trainParams['oversampling'] #300
         options.nu = trainParams['nu'] #0.05
@@ -39,51 +68,40 @@ class LipDetector:
             dlib.test_shape_predictor(facesLandmarksXml, output)))
 
 
-    def test_dlib(self, facesLandmarksXml, datFilePath):
-        testing_xml_path = test_landmarks
+    def test(self, testParams):
+        testing_xml_path = testParams['annotationsFile']
+        datFilePath = testParams['modelFilePath']
         print("Testing accuracy: {}".format(
             dlib.test_shape_predictor(facesLandmarksXml, datFilePath)))
 
-    
-    def create_resnet_model(self):
-        '''
-        set self.model to the created resnet model
-        '''
-        raise NotImplemented(self.name + " resnet model is not yet implemented")
-    
 
-    def train_resnet(self, trainParams):
-        raise NotImplementedError(self.name + " train_resnet is not yet implemented")
-
-   
-    def test_resnet(self, testParams):
-        raise NotImplementedError(self.name + " test_resnet is not yet implemented")
-
-
+    '''
+        arg1: image as cv Mat
+        returns: dlib.full_object_detection containing 20 lip landmarks
+    '''
     def detect_landmarks(self, img):
-        '''
-        Use dlib to detect 48-67 lip landmarks
-        Returns list of tuple of pixel cordinates
-        '''
-        faceDetector = dlib.get_frontal_face_detector()
-        faces = faceDetector(img, 1) # get atleast one face
+
+        faces = self.faceDetector(img, 1) # get atleast one face
         lipPoints = []
         landmarks = self.model(img, faces[0]) # we take only one face bounding box
         for i in range(48,68):
             lipPoints.append(landmarks.part(i)) # extract `dlib.point`s 48-68 of jaw region
         
-        lipBB = detect_bbox(img, landmarks)
+        lipBB = get_bbox(img, landmarks)
         lipDetection = dlib.full_object_detection(lipBB, lipPoints)
         return lipDetection
 
-    
-    def detect_bbox(self, img, landmarks=None):
+    '''
+        arg1: image as cv Mat
+        arg2: 68-face-landmarks if available
+        returns: dlib.rectangle
+    '''
+    def get_bbox(self, img, landmarks=None):
         '''
             Use dlib to detect lip bounding box
         '''
         if landmarks == None:
-            faceDetector = dlib.get_frontal_face_detector()
-            faces = faceDetector(img, 1) # get atleast one face
+            faces = self.faceDetector(img, 1) # get atleast one face
             lipPoints = []
             landmarks = self.model(img, faces[0]) # we take only one face bounding box
         
@@ -97,5 +115,5 @@ class LipDetector:
 
     
     def __str__(self):
-        return self.name + ":\nModel = " + self.modelName
+        return "Model = " + self.modelName
 
