@@ -1,5 +1,11 @@
 .vscode
-data
+.idea
+datasets
 __pycache__
 external
 *.pyc
+.ipynb_checkpoints
+weights
+.DS_Store
+[Tt]humbs.db
+[Dd]esktop.ini
