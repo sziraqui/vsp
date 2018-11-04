@@ -33,8 +33,8 @@ def word2binmat_test():
     array([ 0, 19])
     >>> np.argmax(word2binmat(0,13,'foo'), axis=1)
     array([ 5,  5,  5,  5, 14, 14, 14, 14, 14, 14, 14, 14, 26, 26])
-    >>> np.argmax(word2binmat(12,15,'four'), axis=1)
-    array([ 5, 14, 20, 17])
+    >>> np.argmax(word2binmat(0,4,None), axis=1)
+    array([27, 27, 27, 27, 27])
     """
 
 def min_repetitions_test():

@@ -32,11 +32,11 @@ def word2ints(word):
     arg2: normalized end frame of word occurence in video
     arg3: word [a-z] (small caps) as str
 '''
-def word2binmat(wordStart, wordEnd, word):
+def word2binmat(wordStart, wordEnd, word=None):
     size = wordEnd - wordStart + 1
     wordBins = np.zeros((size, 28))
- 
-    if word in ['sp', 'sil']:
+    # Frame has no speech when word is not passed
+    if word == None:
         wordBins[:, 27] = 1 # 27 denotes CTC blank
         return wordBins
     codePoints = word2ints(word)
