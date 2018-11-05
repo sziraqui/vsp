@@ -4,13 +4,14 @@ import numpy as np
 '''
     Extract word start and end timestamps from a transcript line
     arg1: A string of format "start_frame end_frame word"
-    returns: normalized word start, end frame and acutual word
+    returns: normalized word start, end frame and actual word
+    timeFactor is used to scale frame number representation
 '''
-def extract_timestamps_and_word(transcript_line):
+def extract_timestamps_and_word(transcript_line, timeFactor):
     wordStart, wordEnd, word = transcript_line.split()
 
-    wordStart = int(np.round(float(wordStart)))
-    wordEnd = int(np.round(float(wordEnd)))
+    wordStart = int(np.round(float(wordStart) * timeFactor))
+    wordEnd = int(np.round(float(wordEnd) * timeFactor))
     return wordStart, wordEnd, word
 
 
