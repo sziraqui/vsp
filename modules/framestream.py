@@ -2,23 +2,32 @@ import cv2 as cv
 import numpy as np
 import glob
 import os
-    
+
+
+class StreamInterface:
+    def __init__(self):
+        self.buffer = []
+        self.BUFFER_SIZE = 75
+        self.lastIndex = -1
+    def next_frame(self):
+        raise NotImplementedError("Implement in subclass")
+    def buffer_frames(self):
+        raise NotImplementedError("Implement in subclass")
+
+
 """
     Read input from a folder containing ordered images
     Buffer frames for faster io
 """
-class ImageStream:
+class ImageStream(StreamInterface):
     def __init__(self, sourcePath=None):
+        StreamInterface.__init__(self)
         self.name = "ImageStream"
         self.sourcePath = sourcePath
-        self.buffer = []
-        self.BUFFER_SIZE = 750
-        self.lastIndex = -1
         self.fileList = []
         if sourcePath != None:
             self.fileList = glob.glob(os.path.join(self.sourcePath, "*.jpg"))
         
-
 
     def next_frame(self):
         if len(self.buffer) < 1:
@@ -85,4 +94,3 @@ class VideoStream(ImageStream):
     
     def __str__(self):
         return self.name + "\nsource = " + str(self.sourcePath) + "\nBuffer size:" + str(len(self.buffer))
-
