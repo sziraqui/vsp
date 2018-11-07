@@ -98,14 +98,15 @@ class SentenceReader(WordReader):
 
    def __init__(self, name, params):
 
-        WordReader.__init__(self)
-        self.frameLength = 75
-        self.frameWidth = 100
-        self.frameHeight = 50
-        if params['resume']:
-            self.model = model.load_model(params['model_file_checkpoint'])
-        else:
-            self.create_model(params)
+    WordReader.__init__(self, name, params)
+    self.frameLength = 75
+    self.frameWidth = 100
+    self.frameHeight = 50
+    if params['resume']:
+        self.model = model.load_model(params['model_file_checkpoint'])
+    else:
+        self.create_model(params)
+
 
     def __str__(self):
         return f"{self.name:\n}Model Summary:  {self.model.summary()}"
