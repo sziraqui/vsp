@@ -9,24 +9,28 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers.recurrent import GRU
 from keras.layers.wrappers import Bidirectional, TimeDistributed
 from keras import backend as K
+from keras.models import load_model
 from .textprocessing import binmat2word
 
 
 class WordReader:
 
-    def __init__(self, name, params):
-        self.name = name or "WordReader"
+    def __init__(self, params):
+        self.name = params['model_file']
         self.model = None
-        self.frameLength = params['frameLength']
+        try:
+            self.frameLength = params['frame_length']
+        except KeyError:
+            self.frameLength = 7
         self.frameWidth = 100
         self.frameHeight = 50
         if params['resume']:
-            self.model = model.load_model(params['model_file_checkpoint'])
+            self.model = load_model(params['model_file_checkpoint'])
         else:
             self.create_model(params)
 
 
-    def create_model(self,params):
+    def create_model(self, params):
         input_shape = (self.frameLength, self.frameHeight, self.frameWidth, 3)
         model = Sequential()
         # Layer 1: Convolution 3D, 32 filters
@@ -70,10 +74,10 @@ class WordReader:
         try:
             history = self.model.fit(xtrain, ytrain, batch_size=trainParams['batch_size'], epochs=trainParams['epochs'], validation_split=trainParams['validation_split'])
         except InterruptedError:
-            model.save(f"checkpoint-{time.time()}-{trainParams['model_file']}")
+            self.model.save(f"checkpoint-{time.time()}-{trainParams['model_file']}")
             error = True
         if not error:
-            model.save(trainParams['model_file'])
+            self.model.save(trainParams['model_file'])
         return history
     
 
@@ -84,7 +88,7 @@ class WordReader:
 
     def predict_word(self, frames):
         if frames.shape == (self.frameLength, self.frameHeight, self.frameWidth, 3):
-            binmat = self.mode.predict(frames)
+            binmat = self.model.predict(frames)
             return binmat2word(binmat)
         else:
             print("Incorrect frame shape")
@@ -96,14 +100,17 @@ class WordReader:
 
 class SentenceReader(WordReader):
 
-   def __init__(self, name, params):
+   def __init__(self, params):
 
-    WordReader.__init__(self, name, params)
-    self.frameLength = 75
+    WordReader.__init__(self, params)
+    try:
+        self.frameLength = params['frame_length']
+    except KeyError:
+        self.frameLength = 75
     self.frameWidth = 100
     self.frameHeight = 50
     if params['resume']:
-        self.model = model.load_model(params['model_file_checkpoint'])
+        self.model = load_model(params['model_file_checkpoint'])
     else:
         self.create_model(params)
 
