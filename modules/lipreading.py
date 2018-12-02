@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 import keras
 from keras.models import Sequential
 from keras.layers import Input
@@ -10,7 +11,7 @@ from keras.layers.recurrent import GRU
 from keras.layers.wrappers import Bidirectional, TimeDistributed
 from keras import backend as K
 from keras.models import load_model
-from .textprocessing import binmat2word
+from .textprocessing import ints2word, wordCollapse
 
 
 class WordReader:
@@ -86,12 +87,17 @@ class WordReader:
         return lossPercent, accuracy
 
 
+    def predict_raw(self, frames):
+        assert frames.shape == (self.frameLength, self.frameHeight, self.frameWidth, 3)
+        codePoints = np.argmax(self.model.predict(np.array([frames]))[0], axis=0)
+        return codePoints
+
+
     def predict_word(self, frames):
-        if frames.shape == (self.frameLength, self.frameHeight, self.frameWidth, 3):
-            binmat = self.model.predict(frames)
-            return binmat2word(binmat)
-        else:
-            print("Incorrect frame shape")
+        codePoints = self.predict_raw(frames)
+        expandedWord = ints2word(codePoints)
+        word = wordCollapse(expandedWord)
+        return word
 
 
     def __str__(self):
