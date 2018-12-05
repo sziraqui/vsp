@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 from modules.framestream import VideoStream, TranscriptFileStream
 from modules.preprocessing import LipDetectorDlib
-from modules.textprocessing import word2binmat, extract_timestamps_and_word, binmat2word
+from modules.textprocessing import *
 import cv2 as cv
 import dlib
 import h5py
@@ -83,30 +83,37 @@ for i in tqdm(range(sample_size)):
     # Pair word with frames all of length 15
     #print(sample_ids[i])
     for w in transcript:
-        length = w[1] - w[0] + 1
-        if w[2] in ["sp", "sil"]:
-            if length == 15:
-                binmat = word2binmat(w[0], w[1])
-                X.append(frames[w[0]:w[1]+1])
-                Y.append(binmat)
-            else:
-                continue
-        elif length <= 15:
-            X.append(np.zeros((15, out_img_height, out_img_width, 3)))
-            Y.append(np.zeros((15, 28)))
-            s1 = 7 - length//2
-            s2 = 7 + int(length/2 + 0.5)
-            #print(length,s1,s2)
-            if s1>0:
-                X[-1][:s1,:,:] = silentClip[:s1]
-                Y[-1][:s1,:] = word2binmat(0, s1-1)
-            X[-1][s1:s2,:,:] = frames[s1:s2]
-            Y[-1][s1:s2,:] = word2binmat(w[0], w[1], w[2])
-            if s2<15:
-                X[-1][s2:,:,:] = silentClip[:15-s2]
-                Y[-1][s2:,:] = word2binmat(s2, 14)
-            #print(X[-1].shape)
-            #print(binmat2word(Y[-1]))
-with h5py.File(f"../datasets/grid_word_{sample_start}-{sample_end}_100x50.hdf5", "w") as f:
+        try:
+            length = w[1] - w[0] + 1
+            if w[2] in ["sp", "sil"]:
+                if length == 15:
+                    codePoints = word2ints(wordExpansion(w[0], w[1], w[2]))
+                    X.append(frames[w[0]:w[1]+1])
+                    Y.append(codePoints)
+                else:
+                    continue
+            elif length <= 15:
+                X.append(np.zeros((15, out_img_height, out_img_width, 3)))
+                Y.append(np.zeros((15,)))
+                s1 = 7 - length//2
+                s2 = 7 + int(length/2 + 0.5)
+                #print(length,s1,s2)
+                if s1>0:
+                    X[-1][:s1,:,:] = silentClip[:s1]
+                    Y[-1][:s1] = word2ints(wordExpansion(0, s1-1, CHAR_SPACE))
+                X[-1][s1:s2,:,:] = frames[s1:s2]
+                Y[-1][s1:s2] = word2ints(wordExpansion(w[0], w[1], w[2]))
+                if s2<15:
+                    X[-1][s2:,:,:] = silentClip[:15-s2]
+                    Y[-1][s2:] = word2ints(wordExpansion(s2, 14, CHAR_SPACE))
+                #print(X[-1].shape)
+                #print(ints2word(Y[-1]))
+        except AssertionError:
+            continue
+
+outFile = f"../datasets/grid_words15_{sample_start}-{sample_end}.hdf5"
+with h5py.File(outFile, "w") as f:
+    print(f"Saving to {outFile}...")
     f.create_dataset("features", data=X, dtype='i1', compression="gzip", compression_opts=4)
     f.create_dataset("labels", data=Y, dtype='i1', compression='gzip', compression_opts=4)
+print("Done")
