@@ -12,11 +12,18 @@ from keras.layers.wrappers import Bidirectional, TimeDistributed
 from keras import backend as K
 from keras.models import load_model
 from .textprocessing import ints2word, wordCollapse
+from generators import BatchGenerator
 
 
 class WordReader:
-
-    def __init__(self, params):
+    """
+        WordReader constructor
+        Required args
+        - params: A dict-like object containing model parameters
+        Positional args (required for training)
+        - generator: An instance if Generator as defined in generators.py
+    """
+    def __init__(self, params, generator=None):
         self.name = params['model_file']
         self.model = None
         try:
@@ -29,8 +36,20 @@ class WordReader:
             self.model = load_model(params['model_file_checkpoint'])
         else:
             self.create_model(params)
+        
+        try:
+            self.batchSize = params['batch_size']
+            self.sampleSize = params['sample_size']
+            # Make sampleSize a multiple of batchSize
+            self.sampleSize = sampleSize - sampleSize%self.batchSize
+        except KeyError:
+            self.sampleSize = 0
+            self.batchSize = 0
 
+        if generator is not None:
+            assert isinstance(generator, BatchGenerator)
 
+    
     def create_model(self, params):
         input_shape = (self.frameLength, self.frameHeight, self.frameWidth, 3)
         model = Sequential()
@@ -97,9 +116,9 @@ class WordReader:
         codePoints = self.predict_raw(frames)
         expandedWord = ints2word(codePoints)
         word = wordCollapse(expandedWord)
-        return word
+        return word        
 
-
+        
     def __str__(self):
         return f"{self.name:\n}Model Summary:  {self.model.summary()}"
 
