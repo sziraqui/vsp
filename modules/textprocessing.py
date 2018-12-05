@@ -109,7 +109,11 @@ def wordExpansion(wordStart, wordEnd, word):
 
     if timeLength <= 2*len(newWord):
         numVowels = countVowels(newWord)
-        repeat = (timeLength - len(newWord) + numVowels)//numVowels
+        repeat = 0
+        try:
+            repeat = (timeLength - len(newWord) + numVowels)//numVowels
+        except ZeroDivisionError:
+            repeat = 1
         i = 0
         for ch in newWord:
             if ch in VOWELS:
