@@ -2,7 +2,8 @@ import cv2 as cv
 import numpy as np
 import glob
 import os
-from .textprocessing import word2binmat, binmat2word, extract_timestamps_and_word
+from .textprocessing import extract_timestamps_and_word, wordExpansion, word2ints
+from .textprocessing import CHAR_SPACE, CODE_SPACE
 
 class StreamInterface:
     def __init__(self):
@@ -96,16 +97,19 @@ class VideoStream(ImageStream):
         return self.name + "\nsource = " + str(self.sourcePath) + "\nBuffer size:" + str(len(self.buffer))
 
 """
-    Streams transcript words and converts transcript into binary matrix
-    See modules.textprocessing.word2binmat function description for details of binary representation
+    Streams transcript words and converts transcript into array of ints
+    See modules.textprocessing.wordExpansion function description for details of array representation
 """
 class TranscriptFileStream(StreamInterface):
-
-    def __init__(self, sourcePath=None, timeFactor=1):
+    """
+        ignoreList: list of word to be considered as silent portions of video
+    """
+    def __init__(self, sourcePath=None, timeFactor=1, ignoreList=['']):
         StreamInterface.__init__(self)
         self.name = "TranscriptFileStream"
         self.transcriptLines = []
         self.timeFactor = timeFactor
+        self.ignoreList = ignoreList
         if sourcePath != None:
             self.set_source(sourcePath)
     
@@ -118,11 +122,15 @@ class TranscriptFileStream(StreamInterface):
         
     
     def buffer_frames(self):
-        self.buffer = np.zeros((self.BUFFER_SIZE, 28))
+        self.buffer = [CODE_SPACE]*self.BUFFER_SIZE
         for line in self.transcriptLines:
-            wordStart, wordEnd, word = extract_timestamps_and_word(line, self.timeFactor) 
-            self.buffer[wordStart: wordEnd + 1] = word2binmat(wordStart, wordEnd, word)
-        self.lastIndex = self.BUFFER_SIZE - 1
+            wordStart, wordEnd, word = extract_timestamps_and_word(line, self.timeFactor)
+            if word in self.ignoreList:
+                word = CHAR_SPACE
+            expandedWord = wordExpansion(wordStart, wordEnd-1, word)
+            self.buffer[wordStart: wordEnd] = word2ints(expandedWord)
+            #self.buffer[wordEnd-1] = CODE_SPACE # to separate two consecutive words
+            self.lastIndex = self.BUFFER_SIZE - 1
     
 
     def next_frame(self):
