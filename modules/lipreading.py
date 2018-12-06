@@ -12,7 +12,6 @@ from keras.layers.wrappers import Bidirectional, TimeDistributed
 from keras import backend as K
 from keras.models import load_model
 from .textprocessing import ints2word, wordCollapse
-from generators import BatchGenerator
 
 
 class WordReader:
@@ -41,13 +40,10 @@ class WordReader:
             self.batchSize = params['batch_size']
             self.sampleSize = params['sample_size']
             # Make sampleSize a multiple of batchSize
-            self.sampleSize = sampleSize - sampleSize%self.batchSize
+            self.sampleSize = self.sampleSize - self.sampleSize%self.batchSize
         except KeyError:
             self.sampleSize = 0
             self.batchSize = 0
-
-        if generator is not None:
-            assert isinstance(generator, BatchGenerator)
 
     
     def create_model(self, params):
@@ -76,7 +72,7 @@ class WordReader:
         model.add(MaxPooling3D(pool_size=(1, 2, 2), strides=(1, 2, 2)))
         # Layer 4: Time series distribution
         model.add(TimeDistributed(Flatten()))
-        # Layer 5: GRU
+        # Layer 5: GRU 
         model.add(Bidirectional(GRU(units=256, kernel_initializer='Orthogonal', return_sequences=True), merge_mode='concat'))
         # Layer 6: GRU
         model.add(Bidirectional(GRU(units=256, kernel_initializer='Orthogonal', return_sequences=True), merge_mode='concat'))
