@@ -87,25 +87,25 @@ for i in tqdm(range(sample_size)):
             length = w[1] - w[0] + 1
             if w[2] in ["sp", "sil"]:
                 if length == 15:
-                    codePoints = word2ints(wordExpansion(w[0], w[1], w[2]))
+                    binmat = word2binmat(w[0], w[1], w[2])
                     X.append(frames[w[0]:w[1]+1])
-                    Y.append(codePoints)
+                    Y.append(binmat)
                 else:
                     continue
             elif length <= 15:
                 X.append(np.zeros((15, out_img_height, out_img_width, 3)))
-                Y.append(np.zeros((15,)))
+                Y.append(np.zeros((15,CODE_BLANK+1)))
                 s1 = 7 - length//2
                 s2 = 7 + int(length/2 + 0.5)
                 #print(length,s1,s2)
                 if s1>0:
                     X[-1][:s1,:,:] = silentClip[:s1]
-                    Y[-1][:s1] = word2ints(wordExpansion(0, s1-1, CHAR_SPACE))
+                    Y[-1][:s1,:] = word2binmat(0, s1-1, CHAR_SPACE)
                 X[-1][s1:s2,:,:] = frames[s1:s2]
-                Y[-1][s1:s2] = word2ints(wordExpansion(w[0], w[1], w[2]))
+                Y[-1][s1:s2,:] = word2binmat(w[0], w[1], w[2])
                 if s2<15:
                     X[-1][s2:,:,:] = silentClip[:15-s2]
-                    Y[-1][s2:] = word2ints(wordExpansion(s2, 14, CHAR_SPACE))
+                    Y[-1][s2:,:] = word2binmat(s2, 14, CHAR_SPACE)
                 #print(X[-1].shape)
                 #print(ints2word(Y[-1]))
         except AssertionError:
