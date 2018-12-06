@@ -12,17 +12,15 @@ from keras.layers.wrappers import Bidirectional, TimeDistributed
 from keras import backend as K
 from keras.models import load_model
 from .textprocessing import ints2word, wordCollapse
-
+from .generators import GeneratorInterface
 
 class WordReader:
     """
         WordReader constructor
         Required args
         - params: A dict-like object containing model parameters
-        Positional args (required for training)
-        - generator: An instance if Generator as defined in generators.py
     """
-    def __init__(self, params, generator=None):
+    def __init__(self, params):
         self.name = params['model_file']
         self.model = None
         try:
@@ -84,7 +82,7 @@ class WordReader:
         self.model = model
 
     
-    def train_model(self, xtrain, ytrain, trainParams):
+    def train_model(self, xtrain, ytrain, trainParams, generator=None):
         history = None
         error = False
         try:
@@ -95,7 +93,25 @@ class WordReader:
         if not error:
             self.model.save(trainParams['model_file'])
         return history
-    
+     
+    def train_with_generator(self, trainParams, generator):
+        history = None
+        error = False
+        try:
+            assert isinstance(generator, GeneratorInterface)
+            history = self.model.fit_generator(
+                generator.next_batch(self.batchSize), 
+                initial_epoch=trainParams['initial_epoch'], 
+                epochs=trainParams['epochs'], 
+                steps_per_epoch=int(trainParams['sample_size']//trainParams['batch_size']),
+                max_queue_size=trainParams['generator_queue_size'],
+                verbose=1)
+        except InterruptedError:
+            self.model.save(f"checkpoint-{time.time()}-{trainParams['model_file']}")
+            error = True
+        if not error:
+            self.model.save(trainParams['model_file'])
+        return history
 
     def test_model(self, xtest, ytest, testParams):
         lossPercent, accuracy = self.model.evaluate(xtest, ytest)
