@@ -2,6 +2,8 @@
 init: 
 	mkdir -p external
 	mkdir -p weights
+	mkdir -p datasets
+	mkdir -p logs
 deps-ubuntu:
 	sudo apt-get install build-essential cmake pkg-config wget curl git tar
 	sudo apt-get install gcc-5 g++-5

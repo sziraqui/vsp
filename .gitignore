@@ -9,3 +9,5 @@ weights
 .DS_Store
 [Tt]humbs.db
 [Dd]esktop.ini
+*/venv/*
+logs
