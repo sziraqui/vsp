@@ -1,3 +1,6 @@
+import os
+from time import localtime as time
+from time import strftime as timeformat
 import tensorflow as tf
 import numpy as np
 import keras
@@ -9,6 +12,8 @@ from keras.layers.core import SpatialDropout3D, Flatten, Dense, Activation
 from keras.layers.normalization import BatchNormalization
 from keras.layers.recurrent import GRU
 from keras.layers.wrappers import Bidirectional, TimeDistributed
+from keras.optimizers import Adam
+from keras.callbacks import TensorBoard
 from keras import backend as K
 from keras.models import load_model
 from .textprocessing import ints2word, wordCollapse
@@ -77,18 +82,28 @@ class WordReader:
         # Output layer
         model.add(Dense(28, kernel_initializer='he_normal'))
         model.add(Activation('softmax'))
-
-        model.compile(optimizer=params['optimizer'], loss=params['loss_func'], metrics=['accuracy'])
+        adam = Adam(
+                lr=params['learning_rate'], 
+                beta_1=params['learning_beta1'],
+                beta_2=params['learning_beta2'],
+                epsilon=params['learning_decay'])
+        model.compile(optimizer=adam, loss=params['loss_func'], metrics=['accuracy'])
         self.model = model
 
     
     def train_model(self, xtrain, ytrain, trainParams, generator=None):
         history = None
         error = False
+        tensorboard = TensorBoard(log_dir=os.path.join(trainParams['log_dir'], os.path.basename(trainParams['model_file'])))
         try:
-            history = self.model.fit(xtrain, ytrain, batch_size=trainParams['batch_size'], epochs=trainParams['epochs'], validation_split=trainParams['validation_split'])
+            history = self.model.fit(
+                xtrain, ytrain, 
+                batch_size=trainParams['batch_size'], 
+                epochs=trainParams['epochs'], 
+                validation_split=trainParams['validation_split'],
+                callbacks=[tensorboard])
         except InterruptedError:
-            self.model.save(f"checkpoint-{time.time()}-{trainParams['model_file']}")
+            self.model.save(f"checkpoint-{timeformat('%d-%m-%Y-%H-%M-%S', time())}-{trainParams['model_file']}")
             error = True
         if not error:
             self.model.save(trainParams['model_file'])
@@ -97,6 +112,7 @@ class WordReader:
     def train_with_generator(self, trainParams, generator):
         history = None
         error = False
+        tensorboard = TensorBoard(log_dir=os.path.join(trainParams['log_dir'], os.path.basename(trainParams['model_file'])))
         try:
             assert isinstance(generator, GeneratorInterface)
             history = self.model.fit_generator(
@@ -105,9 +121,10 @@ class WordReader:
                 epochs=trainParams['epochs'], 
                 steps_per_epoch=int(trainParams['sample_size']//trainParams['batch_size']),
                 max_queue_size=trainParams['generator_queue_size'],
-                verbose=1)
+                verbose=1,
+                callbacks=[tensorboard])
         except InterruptedError:
-            self.model.save(f"checkpoint-{time.time()}-{trainParams['model_file']}")
+            self.model.save(f"checkpoint-{timeformat('%d-%m-%Y-%H-%M-%S', time())}-{trainParams['model_file']}")
             error = True
         if not error:
             self.model.save(trainParams['model_file'])
