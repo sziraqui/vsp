@@ -21,26 +21,29 @@ class SimpleGenerator(GeneratorInterface):
         self.frameWidth = params['frame_width']
         self.frameHeigth = params['frame_height']
         self.sampleSize = params['sample_size']
+        self.batchSize = params['batch_size']
         self.dataIndex = 0
         self.sampleIndex = 0
         self.seed = seed
+        # pre-allocate memory for one batch
+        self.X = np.zeros((self.batchSize, self.frameLength, self.frameHeigth, self.frameWidth, 3))
+        self.Y = np.zeros((self.batchSize, self.frameLength, CODE_BLANK+1))
 
     def next_batch(self, batchSize):
         servedSamples = 0
         np.random.shuffle(self.dataList)
         while True:
-            X, Y, = None, None
             try:
                 with h5py.File(self.dataList[self.dataIndex], 'r') as f:
-                    X = f["features"][self.sampleIndex : self.sampleIndex + batchSize]
-                    Y = f["labels"][self.sampleIndex : self.sampleIndex + batchSize]
+                    self.X = f["features"][self.sampleIndex : self.sampleIndex + batchSize]
+                    self.Y = f["labels"][self.sampleIndex : self.sampleIndex + batchSize]
             except IndexError:
                 self.dataIndex = (self.dataIndex + 1) % len(self.dataList)
                 self.sampleIndex = 0
                 continue
-            X = normalize(X, axis=1)
-            self.shuffle_together(X, Y, self.seed)
-            yield X, Y
+            self.X = normalize(self.X, axis=1)
+            self.shuffle_together(self.X, self.Y, self.seed)
+            yield self.X, self.Y
             self.sampleIndex += batchSize
             servedSamples+=batchSize
 
