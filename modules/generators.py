@@ -35,6 +35,8 @@ class SimpleGenerator(GeneratorInterface):
             Y = np.zeros((self.batchSize, self.frameLength, CODE_BLANK+1))
             try:
                 with h5py.File(self.dataList[self.dataIndex], 'r') as f:
+                    if f["labels"][self.sampleIndex : self.sampleIndex + batchSize].shape[0] != batchSize:
+                        raise IndexError("Index exceeds available samples in current file")
                     X[:] = f["features"][self.sampleIndex : self.sampleIndex + batchSize]
                     Y[:] = f["labels"][self.sampleIndex : self.sampleIndex + batchSize]
             except IndexError:
