@@ -137,7 +137,7 @@ class WordReader:
 
     def predict_raw(self, frames):
         assert frames.shape == (self.frameLength, self.frameHeight, self.frameWidth, 3)
-        codePoints = np.argmax(self.model.predict(np.array([frames]))[0], axis=0)
+        codePoints = np.argmax(self.model.predict(np.array([frames]))[0], axis=1)
         return codePoints
 
 
