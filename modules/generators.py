@@ -28,28 +28,39 @@ class SimpleGenerator(GeneratorInterface):
         # pre-allocate memory for one batch
 
     def next_batch(self, batchSize):
-        servedSamples = 0
+        endIndex = 0
+        startIndex = endIndex
+        availableSamples = 0
         np.random.shuffle(self.dataList)
         while True:
             X = np.zeros((self.batchSize, self.frameLength, self.frameHeigth, self.frameWidth, 3))
             Y = np.zeros((self.batchSize, self.frameLength, CODE_BLANK+1))
             try:
                 with h5py.File(self.dataList[self.dataIndex], 'r') as f:
-                    if f["labels"][self.sampleIndex : self.sampleIndex + batchSize].shape[0] != batchSize:
-                        raise IndexError("Index exceeds available samples in current file")
-                    X[:] = f["features"][self.sampleIndex : self.sampleIndex + batchSize]
-                    Y[:] = f["labels"][self.sampleIndex : self.sampleIndex + batchSize]
-            except IndexError:
+                    availableSamples = f["labels"][self.sampleIndex : self.sampleIndex + batchSize].shape[0]
+                    startIndex = endIndex%batchSize
+                    endIndex += availableSamples
+                    if  endIndex > batchSize:
+                        endIndex = batchSize
+                    X[startIndex:endIndex] = f["features"][self.sampleIndex : self.sampleIndex + endIndex - startIndex]
+                    Y[startIndex:endIndex] = f["labels"][self.sampleIndex : self.sampleIndex + endIndex - startIndex]
+            except IOError as ioe:
                 self.dataIndex = (self.dataIndex + 1) % len(self.dataList)
                 self.sampleIndex = 0
+                endIndex = 0
+                print(repr(ioe))
                 continue
-            X = normalize(X, axis=1)
-            self.shuffle_together(X, Y, self.seed)
-            yield X, Y
-            del X
-            del Y
-            self.sampleIndex += batchSize
-            servedSamples+=batchSize
+            if endIndex >= batchSize:
+                endIndex = 0
+                self.sampleIndex += availableSamples
+                X = normalize(X, axis=1)
+                self.shuffle_together(X, Y, self.seed)
+                yield X, Y
+                del X
+                del Y
+            else:
+                self.dataIndex = (self.dataIndex + 1)%len(self.dataList)
+                self.sampleIndex = 0
 
 
     def shuffle_together(self, X, Y, seed=-1):
