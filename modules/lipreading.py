@@ -4,7 +4,7 @@ from time import strftime as timeformat
 import tensorflow as tf
 import numpy as np
 import keras
-from keras.models import Sequential
+from keras.models import Model
 from keras.layers import Input
 from keras.layers.convolutional import Conv3D, ZeroPadding3D
 from keras.layers.pooling import MaxPooling3D
@@ -16,8 +16,10 @@ from keras.optimizers import Adam
 from keras.callbacks import TensorBoard
 from keras import backend as K
 from keras.models import load_model
-from .textprocessing import ints2word, wordCollapse
+from .textprocessing import ints2word, wordCollapse, CODE_BLANK
 from .generators import GeneratorInterface
+from .metrics import CTC
+
 
 class WordReader:
     """
@@ -50,38 +52,45 @@ class WordReader:
 
     
     def create_model(self, params):
-        input_shape = (self.frameLength, self.frameHeight, self.frameWidth, 3)
-        model = Sequential()
+        inputShape = (self.frameLength, self.frameHeight, self.frameWidth, 3)
+        labelInput = Input(name='label_input', shape=[CODE_BLANK+1])
+        inputLen = Input(name='input_length', shape=[1], dtype='int64')
+        labelLen = Input(name='label_length', shape=[1], dtype='int64')
+        # Input layer
+        imgInput = Input(shape=inputShape, name='input')
         # Layer 1: Convolution 3D, 32 filters
-        model.add(ZeroPadding3D(input_shape=input_shape, padding=(1,2,2)))
-        model.add(Conv3D(filters=32, kernel_size=(3,5,5), strides=(1,2,2), kernel_initializer='he_normal'))
-        model.add(BatchNormalization())
-        model.add(Activation('relu'))
-        model.add(SpatialDropout3D(0.5))
-        model.add(MaxPooling3D(pool_size=(1, 2, 2), strides=(1, 2, 2)))
+        padd1 = ZeroPadding3D(input_shape=inputShape, padding=(1,2,2), name='zero_pad1')(imgInput)
+        conv1 = Conv3D(filters=32, kernel_size=(3,5,5), strides=(1,2,2), kernel_initializer='he_normal', name='conv3d_32')(padd1)
+        norm1 = BatchNormalization(name='bnorm_1')(conv1)
+        relu1 = Activation('relu', name='relu_1')(norm1)
+        drop1 = SpatialDropout3D(0.5)(relu1)
+        pool1 = MaxPooling3D(pool_size=(1, 2, 2), strides=(1, 2, 2), name='max_pool1')(drop1)
         # Layer 2: Covolution 3D, 64 filters
-        model.add(ZeroPadding3D(padding=(1,2,2)))
-        model.add(Conv3D(filters=64, kernel_size=(3,5,5), strides=(1,1,1), kernel_initializer='he_normal'))
-        model.add(BatchNormalization())
-        model.add(Activation('relu'))
-        model.add(SpatialDropout3D(0.5))
-        model.add(MaxPooling3D(pool_size=(1, 2, 2), strides=(1, 2, 2)))
+        padd2 = ZeroPadding3D(padding=(1,2,2), name='zero_pad2')(pool1)
+        conv2 = Conv3D(filters=64, kernel_size=(3,5,5), strides=(1,1,1), kernel_initializer='he_normal', name='conv3d_64')(padd2)
+        norm2 = BatchNormalization(name='bnorm2')(conv2)
+        relu2 = Activation('relu', name='relu_2')(norm2)
+        drop2 = SpatialDropout3D(0.5)(relu2)
+        pool2 = MaxPooling3D(pool_size=(1, 2, 2), strides=(1, 2, 2), name='max_pool2')(drop2)
         # Layer 3: Convolution 3D, 96 filters
-        model.add(ZeroPadding3D(padding=(1,1,1)))
-        model.add(Conv3D(filters=96, kernel_size=(3,3,3), strides=(1,1,1), kernel_initializer='he_normal'))
-        model.add(BatchNormalization())
-        model.add(Activation('relu'))
-        model.add(SpatialDropout3D(0.5))
-        model.add(MaxPooling3D(pool_size=(1, 2, 2), strides=(1, 2, 2)))
+        padd3 = ZeroPadding3D(padding=(1,1,1), name='zero_pad3')(pool2)
+        conv3 = Conv3D(filters=96, kernel_size=(3,3,3), strides=(1,1,1), kernel_initializer='he_normal', name='conv3d_96')(padd3)
+        norm3 = BatchNormalization(name='bnorm3')(conv3)
+        relu3 = Activation('relu', name='relu_3')(norm3)
+        drop3 = SpatialDropout3D(0.5)(relu3)
+        pool3 = MaxPooling3D(pool_size=(1, 2, 2), strides=(1, 2, 2), name='max_pool3')(drop3)
         # Layer 4: Time series distribution
-        model.add(TimeDistributed(Flatten()))
+        time1 = TimeDistributed(Flatten())(pool3)
         # Layer 5: GRU 
-        model.add(Bidirectional(GRU(units=256, kernel_initializer='Orthogonal', return_sequences=True), merge_mode='concat'))
+        gru1 = Bidirectional(GRU(units=256, kernel_initializer='Orthogonal', return_sequences=True), merge_mode='concat', name='gru1')(time1)
         # Layer 6: GRU
-        model.add(Bidirectional(GRU(units=256, kernel_initializer='Orthogonal', return_sequences=True), merge_mode='concat'))
+        gru2 = Bidirectional(GRU(units=256, kernel_initializer='Orthogonal', return_sequences=True), merge_mode='concat', name='gru2')(gru1)
         # Output layer
-        model.add(Dense(28, kernel_initializer='he_normal'))
-        model.add(Activation('softmax'))
+        dense = Dense(28, kernel_initializer='he_normal', name='dense')(gru2)
+        ypred = Activation('softmax', name='softmax')(dense)
+        loss = CTC([ypred, labelInput, inputLen, labelLen], name='ctc_loss')
+        model = Model(inputs=[imgInput, labelInput, inputLen, labelLen], outputs=loss)
+        
         adam = Adam(
                 lr=params['learning_rate'], 
                 beta_1=params['learning_beta1'],
