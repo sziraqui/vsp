@@ -18,7 +18,7 @@ from keras import backend as K
 from keras.models import load_model
 from .textprocessing import ints2word, wordCollapse, CODE_BLANK
 from .generators import GeneratorInterface
-from .metrics import CTC
+from .metrics import CTC, CTC_LOSS_STR
 
 
 class WordReader:
@@ -53,7 +53,7 @@ class WordReader:
     
     def create_model(self, params):
         inputShape = (self.frameLength, self.frameHeight, self.frameWidth, 3)
-        labelInput = Input(name='label_input', shape=[CODE_BLANK+1])
+        labelInput = Input(name='label_input', shape=[32])
         inputLen = Input(name='input_length', shape=[1], dtype='int64')
         labelLen = Input(name='label_length', shape=[1], dtype='int64')
         # Input layer
@@ -88,7 +88,7 @@ class WordReader:
         # Output layer
         dense = Dense(28, kernel_initializer='he_normal', name='dense')(gru2)
         ypred = Activation('softmax', name='softmax')(dense)
-        loss = CTC([ypred, labelInput, inputLen, labelLen], name='ctc_loss')
+        loss = CTC([ypred, labelInput, inputLen, labelLen], name=CTC_LOSS_STR)
         model = Model(inputs=[imgInput, labelInput, inputLen, labelLen], outputs=loss)
         
         adam = Adam(
