@@ -145,15 +145,10 @@ class WordReader:
         lossPercent, accuracy = self.model.evaluate(xtest, ytest)
         return lossPercent, accuracy
 
-    @property
-    def capture_output(self):
-        # captures output of softmax so we can decode the output during visualization
-        return K.function([self.input_data, K.learning_phase()], [self.y_pred, K.learning_phase()])
-
 
     def predict_raw(self, frames):
         assert frames.shape == (self.frameLength, self.frameHeight, self.frameWidth, 3)
-        out = self.capture_output([frames])[0]
+        out = self.capture_output([np.array([frames])])[0]
         return out
 
 
