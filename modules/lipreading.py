@@ -98,8 +98,8 @@ class WordReader:
                 epsilon=params['learning_decay'])
         model.compile(optimizer=adam, loss=params['loss_func'], metrics=['accuracy'])
         self.model = model
-        self.model_input = imgInput
-        self.model_output = ypred
+        # capture_output is a Function that captures tensor output from ypred and converts it into numpy array
+        self.capture_output = K.function([imgInput], [ypred])
 
     
     def train_model(self, xtrain, ytrain, trainParams, generator=None):
@@ -153,13 +153,13 @@ class WordReader:
 
     def predict_raw(self, frames):
         assert frames.shape == (self.frameLength, self.frameHeight, self.frameWidth, 3)
-        input_batch = np.array([frames]);
-        codePoints = capture_output([input_batch, 0])[0]
-        return codePoints
+        out = self.capture_output([frames])[0]
+        return out
 
 
     def predict_word(self, frames):
-        codePoints = self.predict_raw(frames)
+        out = self.predict_raw(frames)
+        codePoints = np.argmax(out, axis=1)[0]
         expandedWord = ints2word(codePoints)
         word = wordCollapse(expandedWord)
         return word        
