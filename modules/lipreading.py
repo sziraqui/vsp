@@ -149,12 +149,12 @@ class WordReader:
     def predict_raw(self, frames):
         assert frames.shape == (self.frameLength, self.frameHeight, self.frameWidth, 3)
         out = self.capture_output([np.array([frames])])[0]
-        return out
+        return out[0]
 
 
     def predict_word(self, frames):
         out = self.predict_raw(frames)
-        codePoints = np.argmax(out, axis=1)[0]
+        codePoints = np.argmax(out, axis=1)
         expandedWord = ints2word(codePoints)
         word = wordCollapse(expandedWord)
         return word        
