@@ -146,3 +146,15 @@ def wordCollapse(expandedWord):
         if expandedWord[i] != expandedWord[i-1] and expandedWord[i] not in [CHAR_BLANK, CHAR_SPACE]:
             word.append(expandedWord[i])
     return ''.join(word)
+
+'''
+    Collapse long CTC token of words into a sentence
+'''
+def sentenceCollapse(ctcString):
+    ctcTokens = ctcString.split(CHAR_SPACE)
+    words = []
+    for token in ctcTokens:
+        word = wordCollapse(token)
+        if word != CHAR_SPACE:
+            words.append(word)
+    return CHAR_SPACE.join(words)

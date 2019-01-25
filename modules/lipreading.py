@@ -16,7 +16,7 @@ from keras.optimizers import Adam
 from keras.callbacks import TensorBoard
 from keras import backend as K
 from keras.models import load_model
-from .textprocessing import ints2word, wordCollapse, CODE_BLANK
+from .textprocessing import ints2word, wordCollapse, sentenceCollapse, CODE_BLANK
 from .generators import GeneratorInterface
 from .metrics import CTC, CTC_LOSS_STR
 
@@ -166,20 +166,26 @@ class WordReader:
 
 class SentenceReader(WordReader):
 
-   def __init__(self, params):
+    def __init__(self, params):
+        WordReader.__init__(self, params)
+        try:
+            self.frameLength = params['frame_length']
+        except KeyError:
+            self.frameLength = 75
+        self.frameWidth = 100
+        self.frameHeight = 50
+        if params['resume']:
+            self.model = load_model(params['model_file_checkpoint'])
+        else:
+            self.create_model(params)
 
-    WordReader.__init__(self, params)
-    try:
-        self.frameLength = params['frame_length']
-    except KeyError:
-        self.frameLength = 75
-    self.frameWidth = 100
-    self.frameHeight = 50
-    if params['resume']:
-        self.model = load_model(params['model_file_checkpoint'])
-    else:
-        self.create_model(params)
 
+    def predict_sentence(self, frames):
+        out = self.predict_raw(frames)
+        codePoints = np.argmax(out, axis=1)
+        ctcStr = ints2word(codePoints)
+        sentence = sentenceCollapse(ctcStr)
+        return sentence
 
     def __str__(self):
         return f"{self.name:\n}Model Summary:  {self.model.summary()}"
