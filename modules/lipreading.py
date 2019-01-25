@@ -36,10 +36,9 @@ class WordReader:
             self.frameLength = 7
         self.frameWidth = 100
         self.frameHeight = 50
+        self.create_model(params)
         if params['resume']:
-            self.model = load_model(params['model_file_checkpoint'])
-        else:
-            self.create_model(params)
+            self.model.load_weights(params['model_file_checkpoint'])
         
         try:
             self.batchSize = params['batch_size']
@@ -174,10 +173,9 @@ class SentenceReader(WordReader):
             self.frameLength = 75
         self.frameWidth = 100
         self.frameHeight = 50
+        self.create_model(params)
         if params['resume']:
-            self.model = load_model(params['model_file_checkpoint'])
-        else:
-            self.create_model(params)
+            self.model.load_weights(params['model_file_checkpoint'])
 
 
     def predict_sentence(self, frames):
