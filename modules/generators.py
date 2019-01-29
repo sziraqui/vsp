@@ -6,7 +6,7 @@ from keras.utils import normalize
 from .textprocessing import word2ints
 from .textprocessing import CODE_BLANK
 from .metrics import CTC_LOSS_STR
-
+from .utils import Log
 
 class GeneratorInterface(object):
     def __init__(self):
@@ -16,7 +16,7 @@ class GeneratorInterface(object):
 
 
 class SimpleGenerator(GeneratorInterface):
-
+    
     def __init__(self, params, seed=-1):
         self.dataList = params['hdf5_data_list']
         self.frameLength = params['frame_length']
@@ -50,7 +50,7 @@ class SimpleGenerator(GeneratorInterface):
                 self.dataIndex = (self.dataIndex + 1) % len(self.dataList)
                 self.sampleIndex = 0
                 endIndex = 0
-                print(repr(ioe))
+                Log.info(repr(ioe))
                 continue
             if endIndex >= batchSize:
                 endIndex = 0
@@ -101,7 +101,7 @@ class BatchForCTC(SimpleGenerator):
                 self.dataIndex = (self.dataIndex + 1) % len(self.dataList)
                 self.sampleIndex = 0
                 endIndex = 0
-                print(repr(ioe))
+                Log.info(repr(ioe))
                 continue
             if endIndex >= batchSize:
                 endIndex = 0

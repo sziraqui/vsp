@@ -3,6 +3,8 @@ import os
 import cv2 as cv
 import dlib
 import numpy as np
+from .utils import Log
+
 
 '''
     Common interface for lip detector models like dlib resnet etc
@@ -35,7 +37,7 @@ class LipDetectorDlib(LipDetector):
         if weightsFile != None:
             model_from_file(weightsFile)
         else:
-            print('WARNING: weightsFile was not provided, you must set model yourself by calling model_from_file("path/to/file")')
+            Log.warning('weightsFile was not provided, you must set model yourself by calling model_from_file("path/to/file")')
         self.faceDetector = dlib.get_frontal_face_detector()
     
 
@@ -64,14 +66,14 @@ class LipDetectorDlib(LipDetector):
         if output == None:
             output = os.path.abspath(os.path.join('..', 'weights', 'dlib_model.dat'))
         dlib.train_shape_predictor(facesLandmarksXml, output, options)
-        print("\nTraining accuracy: {}".format(
+        Log.info("\nTraining accuracy: {}".format(
             dlib.test_shape_predictor(facesLandmarksXml, output)))
 
 
     def test(self, testParams):
         testing_xml_path = testParams['annotationsFile']
         datFilePath = testParams['modelFilePath']
-        print("Testing accuracy: {}".format(
+        Log.info("Testing accuracy: {}".format(
             dlib.test_shape_predictor(facesLandmarksXml, datFilePath)))
 
 
