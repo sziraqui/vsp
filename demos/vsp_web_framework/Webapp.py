@@ -12,6 +12,7 @@ import h5py
 from glob import glob
 import numpy as np
 from tqdm import tqdm
+from time import time
 
 
 app = Flask(__name__)
@@ -24,20 +25,20 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/')
 def ok():
-   return render_template("VSP.html", data = null)
+   return render_template("VSP.html", data = None)
 
 @app.route('/', methods = ['GET', 'POST'])
 def upload_file():
-   if request.method == 'POST':
-      f = request.files['file']
-      if f.filename == '':
+    if request.method == 'POST':
+        f = request.files['file']
+        if f.filename == '':
             flash('No selected file')
             return redirect(url_for('ok'))
-      else:      
-      		filename = secure_filename(f.filename)
-      		f.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
-      		flash('File uploaded successfully!','success')
-      		return redirect(url_for('ok'))
+        else:      
+            filename = secure_filename(f.filename)
+            f.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
+            flash('File uploaded successfully!','success')
+            return redirect(url_for('ok'))
 
 
 
@@ -47,21 +48,21 @@ def upload_file():
 
 
 def process():
-	filelist = glob('uploads/*')
+    filelist = glob('uploads/*')
     path = filelist[0]
     X = lipdetector(path)
-	output = predict(X)
-	output_path='/static/output.txt'
-	file = open(output_path,'w')
-	file.write(output)
-	file.close()
-	return render_template("VSP.html",data = output)
+    output = predict(X)
+    output_path='/static/output.txt'
+    file = open(output_path,'w')
+    file.write(output)
+    file.close()
+    return render_template("VSP.html",data = output)
 
 
 
 
 def lipdetector(path):
-        vs = VideoStream()
+    vs = VideoStream()
     try:
         vs.sourcePath = path
         vs.set_source()
@@ -94,30 +95,30 @@ def lipdetector(path):
         frame_no+=1
    
         img = vs.next_frame()
-     X.append(frames)
-     return X   
+    X.append(frames)
+    return X   
     
 def predict(frames):
     params = {
-    "resume": True,
-    "initial_epoch": 0,
-    "frame_length": 75,
-    "frame_width": 100,
-    "frame_height": 50,
-    "hdf5_data_list": glob("../datasets/*sentence*.hdf5"),
-    "generator_queue_size": 1, 
-    "loss_func": {'ctc_loss': lambda ytrue,ypred: ypred},
-    "sample_size": 128,
-    "batch_size": 32,
-    "epochs": 30,
-    "learning_rate": 1e-03,
-    "learning_beta1": 0.9,
-    "learning_beta2": 0.999,
-    "learning_decay": 1e-08,
-    "validation_split": 0.2,
-    "log_dir": "../logs"
+        "resume": True,
+        "initial_epoch": 0,
+        "frame_length": 75,
+        "frame_width": 100,
+        "frame_height": 50,
+        "hdf5_data_list": glob("../datasets/*sentence*.hdf5"),
+        "generator_queue_size": 1, 
+        "loss_func": {'ctc_loss': lambda ytrue,ypred: ypred},
+        "sample_size": 128,
+        "batch_size": 32,
+        "epochs": 30,
+        "learning_rate": 1e-03,
+        "learning_beta1": 0.9,
+        "learning_beta2": 0.999,
+        "learning_decay": 1e-08,
+        "validation_split": 0.2,
+        "log_dir": "../logs"
     }    
-    params["model_file"] = f"../weights/lipnet_ctc_s{params['sample_size']}_b{params['batch_size']}_e{params['epochs']}_{time()}.hdf5"
+    params["model_file"] = "../weights/lipnet_ctc_s{0}_b{1}_e{2}_{3}.hdf5".format(params['sample_size'], params['batch_size'], params['epochs'], params['epochs'])
     params['sample_size'] = 64
     params['batch_size'] = 32
     params['epochs'] = 1
