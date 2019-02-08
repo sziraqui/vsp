@@ -47,8 +47,9 @@ def upload_file():
 
 
 def process():
-	path = #path-to-the-video-file
-	X = lipdetector(path)
+	filelist = glob('uploads/*')
+    path = filelist[0]
+    X = lipdetector(path)
 	output = predict(X)
 	output_path='/static/output.txt'
 	file = open(output_path,'w')
