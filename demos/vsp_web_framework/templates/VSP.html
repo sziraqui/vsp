@@ -7,7 +7,18 @@
          enctype = "multipart/form-data">
          <input type = "file" name = "file" />
          <input type = "submit"/>
-      </form>
+         <input type="Process" onclick="{{ process() }}">
+     </form>
+
+
+
+	<video width="320" controls>
+	   <source src="videoplayback.mp4" type="video/mp4" />
+	</video>
+
+	<p>
+		{{ data }}
+	</p>
 
 
 
