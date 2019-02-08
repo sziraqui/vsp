@@ -23,7 +23,6 @@ class SimpleGenerator(GeneratorInterface):
         self.frameWidth = params['frame_width']
         self.frameHeigth = params['frame_height']
         self.sampleSize = params['sample_size']
-        self.batchSize = params['batch_size']
         self.dataIndex = 0
         self.sampleIndex = 0
         self.seed = seed
@@ -35,8 +34,8 @@ class SimpleGenerator(GeneratorInterface):
         availableSamples = 0
         np.random.shuffle(self.dataList)
         while True:
-            X = np.zeros((self.batchSize, self.frameLength, self.frameHeigth, self.frameWidth, 3))
-            Y = np.zeros((self.batchSize, self.frameLength, CODE_BLANK+1))
+            X = np.zeros((batchSize, self.frameLength, self.frameHeigth, self.frameWidth, 3))
+            Y = np.zeros((batchSize, self.frameLength, CODE_BLANK+1))
             try:
                 with h5py.File(self.dataList[self.dataIndex], 'r') as f:
                     availableSamples = f["labels"][self.sampleIndex : self.sampleIndex + batchSize].shape[0]
@@ -82,10 +81,10 @@ class BatchForCTC(SimpleGenerator):
         availableSamples = 0
         np.random.shuffle(self.dataList)
         while True:
-            X = np.zeros((self.batchSize, self.frameLength, self.frameHeigth, self.frameWidth, 3))
-            Y = np.zeros((self.batchSize, 32))
-            InpLen = np.zeros(self.batchSize, dtype='int32')
-            LabelLen = np.zeros(self.batchSize, dtype='int32')
+            X = np.zeros((batchSize, self.frameLength, self.frameHeigth, self.frameWidth, 3))
+            Y = np.zeros((batchSize, 32))
+            InpLen = np.zeros(batchSize, dtype='int32')
+            LabelLen = np.zeros(batchSize, dtype='int32')
             try:
                 with h5py.File(self.dataList[self.dataIndex], 'r') as f:
                     availableSamples = f["labels"][self.sampleIndex : self.sampleIndex + batchSize].shape[0]
@@ -114,7 +113,7 @@ class BatchForCTC(SimpleGenerator):
                     'input_length': InpLen,
                     'label_length': LabelLen
                 }
-                outputs = {CTC_LOSS_STR: np.zeros((self.batchSize, 32))}
+                outputs = {CTC_LOSS_STR: np.zeros((batchSize, 32))}
                 yield inputs, outputs
                 del X
                 del Y
