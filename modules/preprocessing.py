@@ -1,6 +1,5 @@
 import sys
 import os
-import cv2 as cv
 import dlib
 import numpy as np
 from .utils import Log
@@ -78,7 +77,7 @@ class LipDetectorDlib(LipDetector):
 
 
     '''
-        arg1: image as cv Mat
+        arg1: image as np matrix
         returns: dlib.full_object_detection containing 20 lip landmarks
     '''
     def detect_landmarks(self, img):
@@ -94,7 +93,7 @@ class LipDetectorDlib(LipDetector):
         return lipDetection
 
     '''
-        arg1: image as cv Mat
+        arg1: image as np matrix
         arg2: 68-face-landmarks if available
         returns: dlib.rectangle
     '''

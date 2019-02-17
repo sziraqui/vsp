@@ -3,7 +3,7 @@ import os, sys
 sys.path.insert(0, os.path.abspath('..'))
 from modules.framestream import VideoStream
 from modules.preprocessing import LipDetectorDlib
-import cv2 as cv
+from skvideo.io import FFmpegWriter
 import dlib
 
 vs = VideoStream()
@@ -17,17 +17,18 @@ except IndexError:
 lipDetector = LipDetectorDlib()
 lipDetector.model_from_file(os.path.join(os.path.abspath('..'), 'weights','shape_predictor_68_face_landmarks.dat'))
 
-FPS = vs.stream.get(cv.CAP_PROP_FPS)
-vs.BUFFER_SIZE = FPS * 5
+FPS = 25
+vs.BUFFER_SIZE = FPS * 3
 win = dlib.image_window()
 img = vs.next_frame()
-out = cv.VideoWriter('out_' + os.path.basename(vs.sourcePath), cv.VideoWriter_fourcc('X','V','I','D'), 15, (480,360))
+outfile = os.path.join(os.path.dirname(vs.sourcePath), 'out_' + os.path.basename(vs.sourcePath))
+out = FFmpegWriter(outfile)
 while img is not None:
     win.set_image(img)
     bbox = lipDetector.get_bbox(img)
     win.clear_overlay()
     win.add_overlay(bbox)
     #cv.rectangle(img, (bbox.left(), bbox.top()), (bbox.right(), bbox.bottom()), (255,0,0), 1)
-    out.write(img)
+    out.writeFrame(img)
     img = vs.next_frame()
-out.release()
+out.close()
