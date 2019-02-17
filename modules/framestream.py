@@ -1,6 +1,7 @@
 from skimage.io import imread
 from skimage.color import rgba2rgb
 from skimage.transform import resize
+from skvideo.io import FFmpegReader
 import numpy as np
 import glob
 import os
@@ -49,15 +50,16 @@ class ImageStream(StreamInterface):
     def buffer_frames(self):
         for fileName in self.fileList:
             if len(self.buffer) < self.BUFFER_SIZE:
-                frame = ImageStream.read_as_rgb(fileName)
+                frame = imread(fileName, plugin='matplotlib')
+                frame = ImageStream.force_to_rgb(frame)
                 self.buffer.append(frame)
                 self.lastIndex+=1
 
     '''
         Force any image to be in RGB, even if grayscale or RGBA
     '''
-    def read_as_rgb(fileName):
-        frame = imread(fileName, plugin='matplotlib')
+    @staticmethod
+    def force_to_rgb(frame):
         # frame is either GRAY, RGB or RGBA
         if ImageStream.isGray(frame):
             return ImageStream.gray2rgb(frame)
@@ -105,33 +107,37 @@ class ImageStream(StreamInterface):
 """
 class VideoStream(ImageStream):
 
-    def __init__(self, sourcePath=0, params={}):
-        ImageStream.__init__(self, params)
+    def __init__(self, sourcePath=None, params={}):
+        ImageStream.__init__(self, sourcePath, params)
         self.name = "VideoStream"
         self.sourcePath = sourcePath
+        try:
+            self.fps = params['fps']
+        except KeyError:
+            self.fps = 25
         self.set_source()
     
 
     def set_source(self):
-        self.stream = cv.VideoCapture(self.sourcePath)
+        if self.sourcePath != None and os.path.isfile(self.sourcePath):
+            ffmpegInputOpt = {'-r': str(self.fps)}
+            ffmpegOutputOpt = {'-r': str(self.fps)}
+            self.stream = FFmpegReader(self.sourcePath, inputdict=ffmpegInputOpt, outputdict=ffmpegOutputOpt)
 
 
     def buffer_frames(self):
-        if not self.stream.isOpened():
-            return None
-        while self.stream.isOpened() and len(self.buffer) < self.BUFFER_SIZE:
-            no_error, frame = self.stream.read()
-            if no_error:
-                frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-                self.buffer.append(frame)
-                self.lastIndex+=1
-            else:
-                break
-        self.stream.release()
+        # frame buffering is handled by ffmpeg
+        pass
+
+
+    def next_frame(self):
+        # stream.nextFrame() is a generator
+        for frame in self.stream.nextFrame():
+            return ImageStream.force_to_rgb(frame)
 
     
     def __str__(self):
-        return self.name + "\nsource = " + str(self.sourcePath) + "\nBuffer size:" + str(len(self.buffer))
+        return self.name + "\nsource = " + str(self.sourcePath)
 
 """
     Streams transcript words and converts transcript into array of ints

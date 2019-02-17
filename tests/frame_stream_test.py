@@ -41,19 +41,12 @@ def video_stream_test():
     >>> print(vs)
     VideoStream
     source = ../tests/video/sample.3gp
-    Buffer size:0
-    >>> vs.buffer_frames()
-    >>> print(vs)
-    VideoStream
-    source = ../tests/video/sample.3gp
-    Buffer size:44
     >>> img = vs.next_frame()
     >>> img.shape
     (144, 176, 3)
     >>> print(vs)
     VideoStream
     source = ../tests/video/sample.3gp
-    Buffer size:43
     """
     pass
 
