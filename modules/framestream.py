@@ -1,14 +1,20 @@
-import cv2 as cv
+from skimage.io import imread
+from skimage.color import rgba2rgb
+from skimage.transform import resize
 import numpy as np
 import glob
 import os
 from .textprocessing import extract_timestamps_and_word, wordExpansion, word2ints
 from .textprocessing import CHAR_SPACE, CODE_SPACE
+from .utils import Log
 
 class StreamInterface:
-    def __init__(self):
+    def __init__(self, params):
         self.buffer = []
-        self.BUFFER_SIZE = 75
+        try:
+            self.BUFFER_SIZE = params['frame_length']
+        except KeyError:
+            self.BUFFER_SIZE = 75
         self.lastIndex = -1
     def next_frame(self):
         raise NotImplementedError("Implement in subclass")
@@ -21,8 +27,8 @@ class StreamInterface:
     Buffer frames for faster io
 """
 class ImageStream(StreamInterface):
-    def __init__(self, sourcePath=None):
-        StreamInterface.__init__(self)
+    def __init__(self, sourcePath=None, params={}):
+        StreamInterface.__init__(self, params)
         self.name = "ImageStream"
         self.sourcePath = sourcePath
         self.fileList = []
@@ -43,21 +49,52 @@ class ImageStream(StreamInterface):
     def buffer_frames(self):
         for fileName in self.fileList:
             if len(self.buffer) < self.BUFFER_SIZE:
-                frame = cv.imread(fileName)
-                frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+                frame = ImageStream.read_as_rgb(fileName)
                 self.buffer.append(frame)
                 self.lastIndex+=1
-        
+
+    '''
+        Force any image to be in RGB, even if grayscale or RGBA
+    '''
+    def read_as_rgb(fileName):
+        frame = imread(fileName, plugin='matplotlib')
+        # frame is either GRAY, RGB or RGBA
+        if ImageStream.isGray(frame):
+            return ImageStream.gray2rgb(frame)
+    
+        if ImageStream.isRGBA(frame):
+            return rgba2rgb(frame)
+        return frame
+
+
+    @staticmethod
+    def isRGBA(frame):
+        return len(frame.shape) == 3 and frame.shape[2] == 4
+    
+
+    @staticmethod
+    def isGray(frame):
+        return len(frame.shape) == 1
+
+
+    @staticmethod
+    def gray2rgb(grayFrame):
+        f = np.array([grayFrame, grayFrame, grayFrame])
+        # f.shape is (3, _,_)
+        f = np.moveaxis(f, 0, -1)
+        # f.shape is (_,_,3)
+        return f
+
 
     """
         dim = (height, width)
     """
-    def scale_source(self, frame, dim):
-        ogDim = frame.shape
-        if ogDim[:2] != dim:
-            frame = cv.resize(frame, dim)
+    @staticmethod
+    def scale_source(frame, dim):
+        frame = resize(frame, dim, order=1, mode='reflect')
+        return frame
 
-    
+
     def __str__(self):
         return self.name + "\nsource = " + str(self.sourcePath) + "\nBuffer size:" + str(len(self.buffer))
 
@@ -68,8 +105,8 @@ class ImageStream(StreamInterface):
 """
 class VideoStream(ImageStream):
 
-    def __init__(self, sourcePath=0):
-        ImageStream.__init__(self)
+    def __init__(self, sourcePath=0, params={}):
+        ImageStream.__init__(self, params)
         self.name = "VideoStream"
         self.sourcePath = sourcePath
         self.set_source()
