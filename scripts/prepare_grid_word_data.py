@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath('..'))
 from modules.framestream import VideoStream, TranscriptFileStream
 from modules.preprocessing import LipDetectorDlib
 from modules.textprocessing import *
-import cv2 as cv
+
 import dlib
 import h5py
 from glob import glob
@@ -34,12 +34,9 @@ lipDetector = LipDetectorDlib()
 lipDetector.model_from_file(os.path.join(os.path.abspath(
         '..'), 'weights', 'shape_predictor_68_face_landmarks.dat'))
 
-chdict = {ch:i for i,ch in enumerate('abcdefghijklmnopqrstuvwxyz ')}
 
 X = []
 Y = []
-LabelLength = []
-InputLength = []
 
 for i in tqdm(range(sample_size)):
     transcript = []
@@ -58,15 +55,10 @@ for i in tqdm(range(sample_size)):
     except Exception:
         print(f'Error when processing {sample_ids[i]}')
 
-
     for line in ts.transcriptLines:
         wordStart, wordEnd, word = extract_timestamps_and_word(line, ts.timeFactor)
-        if word not in ['sp', 'sil']:
-            transcript.append(word)
-    sentence = list(map(lambda ch: chdict[ch] , ' '.join(transcript)))
-    labels = np.concatenate([np.array(sentence), np.zeros(32 - len(sentence)) + CODE_BLANK])
-
-    #print(labels)
+        transcript.append([wordStart, wordEnd, word])
+    #print(transcript)
 
     frame_no = 0
 
@@ -84,17 +76,45 @@ for i in tqdm(range(sample_size)):
         frames[frame_no] = lipImg
         img = vs.next_frame()
         frame_no+=1
-    X.append(frames)
-    InputLength.append(75)
-    Y.append(labels)
-    LabelLength.append(len(sentence))
+    silentClip = np.concatenate(
+        (frames[transcript[0][0]: transcript[0][1]],
+        frames[transcript[-1][0]: transcript[-1][1]]))
+    
+    # Pair word with frames all of length 15
+    #print(sample_ids[i])
+    for w in transcript:
+        try:
+            length = w[1] - w[0] + 1
+            if w[2] in ["sp", "sil"]:
+                if length == 15:
+                    binmat = word2binmat(w[0], w[1], w[2])
+                    X.append(frames[w[0]:w[1]+1])
+                    Y.append(binmat)
+                else:
+                    continue
+            elif length <= 15:
+                X.append(np.zeros((15, out_img_height, out_img_width, 3)))
+                Y.append(np.zeros((15,CODE_BLANK+1)))
+                s1 = 7 - length//2
+                s2 = 7 + int(length/2 + 0.5)
+                #print(length,s1,s2)
+                if s1>0:
+                    X[-1][:s1,:,:] = silentClip[:s1]
+                    Y[-1][:s1,:] = word2binmat(0, s1-1, CHAR_SPACE)
+                X[-1][s1:s2,:,:] = frames[s1:s2]
+                Y[-1][s1:s2,:] = word2binmat(w[0], w[1], w[2])
+                if s2<15:
+                    X[-1][s2:,:,:] = silentClip[:15-s2]
+                    Y[-1][s2:,:] = word2binmat(s2, 14, CHAR_SPACE)
+                #print(X[-1].shape)
+                #print(ints2word(Y[-1]))
+        except AssertionError:
+            continue
 
-
-outFile = f"../datasets/grid_sentences_ctc_{sample_start}-{sample_end}.hdf5"
+X = np.round(X * 255).astype(numpy.uint8)
+outFile = f"../datasets/grid_words15_{sample_start}-{sample_end}.hdf5"
 with h5py.File(outFile, "w") as f:
     print(f"Saving to {outFile}...")
-    f.create_dataset("features", data=X, dtype='i1', compression="gzip", compression_opts=4)
-    f.create_dataset("labels", data=Y, dtype='i1', compression='gzip', compression_opts=4)
-    f.create_dataset("input_length", data=InputLength, dtype='i1', compression='gzip', compression_opts=4)
-    f.create_dataset("label_length", data=LabelLength, dtype='i1', compression='gzip', compression_opts=4)
+    f.create_dataset("features", data=X, dtype='uint8', compression="gzip", compression_opts=4)
+    f.create_dataset("labels", data=Y, dtype='uint8', compression='gzip', compression_opts=4)
 print("Done")
