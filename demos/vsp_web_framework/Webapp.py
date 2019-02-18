@@ -80,14 +80,13 @@ def process():
 
 
 def lipdetector(path):
+    t= time()
     out_img_heigth, out_img_width = 50, 100
     vs = VideoStream(path)
 
     lipDetector = LipDetectorDlib()
     lipDetector.model_from_file(os.path.join(os.path.abspath('../..'), 'weights','shape_predictor_68_face_landmarks.dat'))
     frame_no = 0
-    X = []
-
     frames = np.zeros((75, out_img_heigth, out_img_width,3))
     FPS = 25
     vs.BUFFER_SIZE = FPS * 3
@@ -109,13 +108,12 @@ def lipdetector(path):
             break
    
         img = vs.next_frame()
-    X.append(frames)
-    X = np.array(X)
     
-    t = time()
     
-    output = sr.predict_sentence(X[0])
-
+    t = time() - t
+    print(t)    
+    output = sr.predict_sentence(frames)
+    t =time()
     t = time() - t
     print(t)
 
