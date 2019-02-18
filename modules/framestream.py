@@ -1,5 +1,5 @@
 from skimage.io import imread
-from skimage.color import rgba2rgb
+from skimage.color import rgba2rgb, gray2rgb
 from skimage.transform import resize
 from skvideo.io import FFmpegReader
 import numpy as np
@@ -62,7 +62,7 @@ class ImageStream(StreamInterface):
     def force_to_rgb(frame):
         # frame is either GRAY, RGB or RGBA
         if ImageStream.isGray(frame):
-            return ImageStream.gray2rgb(frame)
+            return gray2rgb(frame)
     
         if ImageStream.isRGBA(frame):
             return rgba2rgb(frame)
@@ -77,15 +77,6 @@ class ImageStream(StreamInterface):
     @staticmethod
     def isGray(frame):
         return len(frame.shape) == 1
-
-
-    @staticmethod
-    def gray2rgb(grayFrame):
-        f = np.array([grayFrame, grayFrame, grayFrame])
-        # f.shape is (3, _,_)
-        f = np.moveaxis(f, 0, -1)
-        # f.shape is (_,_,3)
-        return f
 
 
     """
