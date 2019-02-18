@@ -26,7 +26,7 @@ True output is not known. We approximate the correct output y(t) with the modelâ
 ##Imports
 """
 
-!pip install tf-nightly-2.0-preview
+#!pip install tf-nightly-2.0-preview
 import tensorflow as tf
 
 # We'll generate plots of attention in order to see which parts of an image
@@ -54,7 +54,7 @@ import os
 from keras.preprocessing.text import Tokenizer 
 from keras.preprocessing.sequence import pad_sequences
 
-!pip install scikit-video
+#!pip install scikit-video
 import numpy as np
 import cv2
 import dlib
@@ -70,16 +70,16 @@ import skvideo.io
 ###Download dlib files and grid tar files
 """
 
-#!wget http://spandh.dcs.shef.ac.uk/gridcorpus/examples/id2_vcd_swwp2s.mpg
-#!wget http://spandh.dcs.shef.ac.uk/gridcorpus/examples/id23_vcd_priazn.mpg
-#!wget http://spandh.dcs.shef.ac.uk/gridcorpus/examples/swwp2s.align
-#!wget http://spandh.dcs.shef.ac.uk/gridcorpus/examples/priazn.align
+##!wget http://spandh.dcs.shef.ac.uk/gridcorpus/examples/id2_vcd_swwp2s.mpg
+##!wget http://spandh.dcs.shef.ac.uk/gridcorpus/examples/id23_vcd_priazn.mpg
+##!wget http://spandh.dcs.shef.ac.uk/gridcorpus/examples/swwp2s.align
+##!wget http://spandh.dcs.shef.ac.uk/gridcorpus/examples/priazn.align
 
-!wget http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
-!bzip2 -d shape_predictor_68_face_landmarks.dat.bz2
+#!wget http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+#!bzip2 -d shape_predictor_68_face_landmarks.dat.bz2
 
-!wget http://spandh.dcs.shef.ac.uk/gridcorpus/s1/video/s1.mpg_6000.part1.tar
-!tar -xvf s1.mpg_6000.part1.tar && rm -r s1.mpg_6000.part1.tar
+#!wget http://spandh.dcs.shef.ac.uk/gridcorpus/s1/video/s1.mpg_6000.part1.tar
+#!tar -xvf s1.mpg_6000.part1.tar && rm -r s1.mpg_6000.part1.tar
 
 """### Define dlib paths and set crop parameters"""
 
@@ -222,8 +222,8 @@ X_train /= 255
 ### Get transcript tars
 """
 
-!wget http://spandh.dcs.shef.ac.uk/gridcorpus/s1/align/s1.tar
-!tar -xvf s1.tar && rm -r s1.tar
+#!wget http://spandh.dcs.shef.ac.uk/gridcorpus/s1/align/s1.tar
+#!tar -xvf s1.tar && rm -r s1.tar
 
 #files=['swwp2s.align','priazn.align']
 def prep_text(files):
@@ -248,7 +248,7 @@ sent = prep_text(files)
 """### Tokenize"""
 
 #CHANGE: Have used keras instead of tf.keras
-tokenizer = Tokenizer(oov_token="<unk>", filters='!"#$%&()*+.,-/:;=?@[\]^_`{|}~ ')
+tokenizer = Tokenizer(oov_token="<unk>", filters='#!"#$%&()*+.,-/:;=?@[\]^_`{|}~ ')
 tokenizer.fit_on_texts(sent)
 tokenizer.word_index['<pad>'] = 0
 #tokenizer.word_index
@@ -537,4 +537,3 @@ evaluate(X_train[1])
 
 evaluate(X_train[0])
 
-sent

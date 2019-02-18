@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath('..'))
 from modules.framestream import VideoStream, TranscriptFileStream
 from modules.preprocessing import LipDetectorDlib
 from modules.textprocessing import *
-
+from modules.utils import Log
 import dlib
 import h5py
 from glob import glob
@@ -28,7 +28,7 @@ video_list = sorted(glob(os.path.join(dataset_path, videos_path) + '/*.mpg'))[sa
 video_list.sort()
 
 sample_ids = list(map(lambda x: ''.join(os.path.basename(x).split('.')[:-1]), video_list))
-#print(sample_ids)
+#Log.debug(sample_ids)
 
 lipDetector = LipDetectorDlib()
 lipDetector.model_from_file(os.path.join(os.path.abspath(
@@ -45,18 +45,18 @@ for i in tqdm(range(sample_size)):
     transcript = []
     vs = VideoStream()
     ts = TranscriptFileStream(timeFactor=0.001)
-    #print(f"Processing file: {sample_ids[i]}")
+    #Log.debug(f"Processing file: {sample_ids[i]}")
     try:
         vs.sourcePath = video_list[i]
         vs.set_source()
         ts.set_source(os.path.join(dataset_path, txt_path, sample_ids[i]+'.align'))
     except IndexError:
-        print('Index out of range')
+        Log.error('Index out of range')
         sys.exit(1)
     except IOError:
-        print(f'IOError when opening {sample_ids[i]}.align')
+        Log.error(f'IOError when opening {sample_ids[i]}.align')
     except Exception:
-        print(f'Error when processing {sample_ids[i]}')
+        Log.error(f'Error when processing {sample_ids[i]}')
 
 
     for line in ts.transcriptLines:
@@ -66,7 +66,7 @@ for i in tqdm(range(sample_size)):
     sentence = list(map(lambda ch: chdict[ch] , ' '.join(transcript)))
     labels = np.concatenate([np.array(sentence), np.zeros(32 - len(sentence)) + CODE_BLANK])
 
-    #print(labels)
+    #Log.debug(labels)
 
     frame_no = 0
 
@@ -89,14 +89,13 @@ for i in tqdm(range(sample_size)):
     Y.append(labels)
     LabelLength.append(len(sentence))
 
-X = np.array(X)
-X = np.round(X * 255).astype(numpy.uint8)
 
+X = np.array(X, dtype=np.uint8)
 outFile = f"../datasets/grid_sentences_ctc_{sample_start}-{sample_end}.hdf5"
 with h5py.File(outFile, "w") as f:
-    print(f"Saving to {outFile}...")
+    Log.debug(f"Saving to {outFile}...")
     f.create_dataset("features", data=X, dtype='uint8', compression="gzip", compression_opts=4)
     f.create_dataset("labels", data=Y, dtype='uint8', compression='gzip', compression_opts=4)
     f.create_dataset("input_length", data=InputLength, dtype='uint8', compression='gzip', compression_opts=4)
     f.create_dataset("label_length", data=LabelLength, dtype='uint8', compression='gzip', compression_opts=4)
-print("Done")
+Log.debug("Done")
