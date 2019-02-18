@@ -27,7 +27,7 @@ out = FFmpegWriter(outfile)
 while img is not None:
 
     bbox = lipDetector.get_bbox(img)
-    img = add_bbox(img, bbox, (0.4, 0.6, 0.8))
+    img = add_bbox(img, bbox, (0, 255, 0))
     out.writeFrame(img)
     img = vs.next_frame()
 

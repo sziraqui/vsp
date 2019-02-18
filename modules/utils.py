@@ -24,9 +24,9 @@ Log = getLogger()
 
 
 '''
-    image: ndarray as RGB floats
+    image: ndarray as RGB ints
     bbox: dlib.rectangle defining bounding box
-    color: tuple of (R,G,B) floats
+    color: tuple of (R,G,B) ints
 '''
 def add_bbox(image, bbox, color):
     c = np.array([bbox.left(), bbox.left(), bbox.right(), bbox.right()], dtype=int)
