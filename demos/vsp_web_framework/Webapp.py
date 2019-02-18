@@ -15,6 +15,30 @@ from tqdm import tqdm
 from time import time
 
 
+params = {
+        "resume": True,
+        "initial_epoch": 0,
+        "frame_length": 75,
+        "frame_width": 100,
+        "frame_height": 50,
+        "generator_queue_size": 1, 
+        "loss_func": {'ctc_loss': lambda ytrue,ypred: ypred},
+        "sample_size": 128,
+        "batch_size": 32,
+        "epochs": 30,
+        "log_dir": "../logs",
+        "learning_rate": 1e-03,
+        "learning_beta1": 0.9,
+        "learning_beta2": 0.999,
+        "learning_decay": 1e-08,
+        "validation_split": 0.2
+    }
+
+params["model_file"] = "../../weights/lipnet_ctc_s{0}_b{1}_e{2}_{3}.hdf5".format(params['sample_size'], params['batch_size'], params['epochs'], params['epochs'])    
+
+params['model_file_checkpoint'] = "../../weights/lipnet_ctc_s128_b32_e300_18-12-2018-19-02-24.hdf5"
+sr = SentenceReader(params)
+
 app = Flask(__name__)
 
 UPLOAD_FOLDER = 'uploads'
@@ -25,7 +49,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/')
 def ok():
-   return render_template("VSP.html", data=None)
+    return render_template("VSP.html", data = None)
+    
 
 @app.route('/', methods = ['POST'])
 def upload_file():
@@ -48,8 +73,8 @@ def process():
         return render_template("VSP.html", data=None)
     path = filelist[0]
     X = lipdetector(path)
-    output = predict(X[0])
-    return render_template("VSP.html", data = output)
+    #output = predict(X[0])
+    return render_template("VSP.html", data = X)
 
 
 
@@ -86,38 +111,20 @@ def lipdetector(path):
         img = vs.next_frame()
     X.append(frames)
     X = np.array(X)
-    print(X.shape)
-    return X
     
-def predict(frames):
-    params = {
-        "resume": True,
-        "initial_epoch": 0,
-        "frame_length": 75,
-        "frame_width": 100,
-        "frame_height": 50,
-        "hdf5_data_list": glob("../datasets/*sentence*.hdf5"),
-        "generator_queue_size": 1, 
-        "loss_func": {'ctc_loss': lambda ytrue,ypred: ypred},
-        "sample_size": 128,
-        "batch_size": 32,
-        "epochs": 30,
-        "learning_rate": 1e-03,
-        "learning_beta1": 0.9,
-        "learning_beta2": 0.999,
-        "learning_decay": 1e-08,
-        "validation_split": 0.2,
-        "log_dir": "../logs"
-    }    
-    params["model_file"] = "../../weights/lipnet_ctc_s{0}_b{1}_e{2}_{3}.hdf5".format(params['sample_size'], params['batch_size'], params['epochs'], params['epochs'])
-    params['sample_size'] = 64
-    params['batch_size'] = 32
-    params['epochs'] = 1
-    params['model_file_checkpoint'] = "../../weights/lipnet_ctc_s128_b32_e300_18-12-2018-19-02-24.hdf5"
-    sr = SentenceReader(params)
+    t = time()
     
-    output = sr.predict_sentence(frames)
+    output = sr.predict_sentence(X[0])
+
+    t = time() - t
+    print(t)
+
     return output
+    
+def init():
+    sr = SentenceReader(params)
+    return 
+
 
 @app.route('/output')
 def display():
