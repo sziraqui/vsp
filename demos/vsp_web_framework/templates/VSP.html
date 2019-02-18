@@ -2,16 +2,16 @@
 
 {% block content %}
 
+<p>
+	{{ data }}
+</p>
 	<h4> Please Select a video to submit</h4>
 	<form action = "http://localhost:5000/" method = "POST" 
          enctype = "multipart/form-data">
          <input type = "file" name = "file" />
          <input type = "submit"/>
-         <input type="Process" onclick="{{ process() }}">
      </form>
-
-
-
+	 <a href="http://localhost:5000/process">Process</a>
 	<video width="320" controls>
 	   <source src="videoplayback.mp4" type="video/mp4" />
 	</video>
