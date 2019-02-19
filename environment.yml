@@ -1,0 +1,19 @@
+name: vsp-cpu
+channels:
+  - intel
+  - defaults
+  - conda-forge
+  - menpo
+dependencies:
+  - python=3.6.5=11
+  - intel::intelpython3_core=2019.1
+  - intel::tensorflow=1.12.0
+  - keras=2.2.4
+  - scikit-image=0.14.1
+  - scikit-video=1.1.11
+  - tqdm=4.31.1
+  - flask=0.12.2
+  - jupyter
+  - pip:
+    - dlib==19.15.0
+  

@@ -1,17 +1,10 @@
 # Visual Speech Prediction  
 
 ### Quick setup:
-- `git clone <repo_url>`
-- `cd vsp`
-- **Create python3 environment** [call it `vsp-cpu` or `vsp-gpu`]
-- **Activate the environment**
-- `make init`
-- `make deps-ubuntu` [optional][To install dependencies on Ubuntu 16+ which includes all dependencies for opencv and dlib]
-- `make deps-python` [To install required pip packages in current environment]
-- `make dlib`   [To compile and install dlib v19.15 in current python environment]
-- `make opencv` [buggy][Use python-opencv from pip if this doesn't work for you or compile yourself and suggest changes to the Makefile]
+- Goto the project directory and execute
+- `conda env create -f environment.yml`
 
-### Testing the setup
+### Testing your setup
 - `cd tests`
 - `python3 *.py -v`
 - Last line must say 'Test passed' for every .py file
