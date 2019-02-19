@@ -34,9 +34,7 @@ class LipDetectorDlib(LipDetector):
         self.modelName = "dlib"
         self.model = None
         if weightsFile != None:
-            model_from_file(weightsFile)
-        else:
-            Log.warning('weightsFile was not provided, you must set model yourself by calling model_from_file("path/to/file")')
+            self.model_from_file(weightsFile)
         self.faceDetector = dlib.get_frontal_face_detector()
     
 
