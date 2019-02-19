@@ -1,14 +1,14 @@
 {
-    "resume": 0,
+    "resume": true,
     "initial_epoch": 0,
-    "frame_length": 15,
+    "frame_length": 75,
     "frame_width": 100,
     "frame_height": 50,
-    "hdf5_data_list": "*words15*.hdf5",
+    "hdf5_data_list": "../dataset/*sentence*.hdf5",
     "generator_queue_size": 2, 
-    "loss_func":"categorical_crossentropy",
-    "sample_size": 64,
-    "batch_size": 16,
+    "loss_func": "ctc_loss",
+    "sample_size": 16,
+    "batch_size": 4,
     "epochs": 2,
     "learning_rate": 1e-03,
     "learning_beta1": 0.9,
@@ -16,5 +16,7 @@
     "learning_decay": 1e-08,
     "validation_split": 0.2,
     "model_file": "../weights/lipnet_15_tmp.hdf5",
+    "model_file_checkpoint": "../weights/lipnet_ctc_s128_b32_e300_18-12-2018-19-02-24.hdf5",
+    "lip_detector_weights": "../weights/shape_predictor_68_face_landmarks.dat",
     "log_dir": "../logs"
 }

@@ -5,6 +5,9 @@ from time import localtime
 from skimage.draw import polygon_perimeter, set_color
 import numpy as np
 import matplotlib.pyplot as plt
+import json
+from glob import glob
+from os import path
 
 def timeNow():
     return strftime('%Y-%M-%d %H:%m:%2ds', localtime())
@@ -40,3 +43,41 @@ def add_bbox(image, bbox, color):
 def imshow(image):
     plt.imshow(image)
     plt.show()
+
+
+def parse_config(configFile):
+    rootdir = path.abspath(path.dirname(configFile))
+    filename = path.basename(configFile)
+    config = {}
+    with open(path.join(rootdir, filename), 'rt', encoding='utf-8') as f:
+        config = json.load(f)
+    try:
+        modelFile = path.join(rootdir, config['model_file'])
+        config['model_file'] = path.abspath(modelFile)
+    except KeyError:
+        pass
+    try:
+        modelFile = path.join(rootdir, config['model_file_checkpoint'])
+        config['model_file_checkpoint'] = path.abspath(modelFile)
+    except KeyError:
+        pass
+    try:
+        logFile = path.join(rootdir, config['log_dir'])
+        config['log_dir'] = path.abspath(logFile)
+    except KeyError:
+        pass
+    try:
+        detectorWt = path.join(rootdir, config['lip_detector_weights'])
+        config['lip_detector_weights'] = path.abspath(detectorWt)
+    except KeyError:
+        pass
+    try:
+        config['hdf5_data_list'] = glob(config['hdf5_data_list'])
+    except KeyError:
+        pass
+    try:
+        if config['loss_func'] == 'ctc_loss':
+            config['loss_func'] = {'ctc_loss': lambda y_true, y_pred: y_pred}
+    except:
+        pass
+    return config
