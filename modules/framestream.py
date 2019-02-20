@@ -195,7 +195,10 @@ class VisemeStream(VideoStream):
         padHorz = round(width * pad_percent / 100)
         return padVert, padHorz
 
-
+    '''
+        Transforms coordinates such that the aspect ratio
+        matches a fixed aspect ratio along with padding
+    '''
     def _normalize_bounds(self, x1, y1, x3, y3):
         if x1 > x3:
             x1, x3 = x3, x1
@@ -220,7 +223,7 @@ class VisemeStream(VideoStream):
         y3 = round(ycenter + halfheight)
         return x1, y1, x3, y3
 
-
+    
     def extract_viseme(self, frame):
         bbox = self.lipDetector.get_bbox(frame)
         x1, y1, x3, y3 = bbox2points(bbox)
@@ -236,13 +239,9 @@ class VisemeStream(VideoStream):
 
     def next_frame(self):
         for frame in self.stream.nextFrame():
-            print('og',frame[0,0,0])
             frame = self.force_to_rgb(frame)
-            print('rgb',frame[0,0,0])
             viseme = self.extract_viseme(frame)
-            print('viseme',frame[0,0,0])
             viseme = image_resize(viseme, self.frameHeight, self.frameWidth)
-            print('scaled',viseme[0,0,0])
             return viseme
         return None
     
