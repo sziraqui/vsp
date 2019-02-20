@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import json
 from glob import glob
 from os import path
+from PIL import Image
+
 
 def timeNow():
     return strftime('%Y-%M-%d %H:%m:%2ds', localtime())
@@ -26,23 +28,40 @@ def getLogger(className='', level=logging.INFO):
 Log = getLogger()
 
 
+def add_rect(image, x1, y1, x3, y3, color):
+    x2, y2 = x1, y3
+    x4, y4 = x3, y1
+    r = np.array([y1, y2, y3, y4], dtype=int)
+    c = np.array([x1, x2, x3, x4], dtype=int)
+    p = polygon_perimeter(r, c, shape=image.shape, clip=True)
+    img = image.copy()
+    set_color(img, p, color)
+    return img
+
+'''
+    Returns top-left and bottom-right cordinates of dlib.rectangle
+'''
+def bbox2points(bbox):
+    x1, y1 = bbox.tl_corner().x, bbox.tl_corner().y
+    x3, y3 = x1 + bbox.width()-1, y1 + bbox.height()-1
+    return x1,y1,x3,y3
 '''
     image: ndarray as RGB ints
     bbox: dlib.rectangle defining bounding box
     color: tuple of (R,G,B) ints
 '''
 def add_bbox(image, bbox, color):
-    c = np.array([bbox.left(), bbox.left(), bbox.right(), bbox.right()], dtype=int)
-    r = np.array([bbox.bottom(), bbox.top(), bbox.top(), bbox.bottom()], dtype=int)
-    p = polygon_perimeter(r, c, shape=image.shape, clip=True)
-    img = image.copy()
-    set_color(img, p, color)
-    return img
+    x1, y1, x3, y3 = bbox2points(bbox)
+    return add_rect(image, x1, y1, x3, y3, color)
 
 
 def imshow(image):
     plt.imshow(image)
     plt.show()
+
+
+def image_resize(img, h, w):
+    return np.array(Image.fromarray(img).resize((w,h), resample=Image.BICUBIC))
 
 
 def parse_config(configFile):
