@@ -7,7 +7,9 @@ import glob
 import os
 from .textprocessing import extract_timestamps_and_word, wordExpansion, word2ints
 from .textprocessing import CHAR_SPACE, CODE_SPACE
-from .utils import Log
+from .utils import Log, add_rect, bbox2points, image_resize
+from .preprocessing import LipDetectorDlib
+import dlib
 
 class StreamInterface:
     def __init__(self, params):
@@ -77,15 +79,6 @@ class ImageStream(StreamInterface):
     @staticmethod
     def isGray(frame):
         return len(frame.shape) == 1
-
-
-    """
-        dim = (height, width)
-    """
-    @staticmethod
-    def scale_source(frame, dim):
-        frame = resize(frame, dim, order=1, mode='reflect')
-        return frame
 
 
     def __str__(self):
@@ -175,3 +168,84 @@ class TranscriptFileStream(StreamInterface):
             return self.buffer[len(self.buffer) - self.lastIndex - 1]
         else:
             None
+
+
+"""
+    VisemeStream performs viseme extraction using a LipDetector
+"""
+class VisemeStream(VideoStream):
+
+    def __init__(self, sourcePath=None, params={}, visualize=False):
+        VideoStream.__init__(self, sourcePath, params)
+        self.name = "VisemeStream"
+        self.lipDetector = LipDetectorDlib(params['lip_detector_weights'])
+        self.BUFFER_SIZE = params['frame_length']
+        # frame refers to expected viseme frame after lip detection
+        self.frameHeight = params['frame_height']
+        self.frameWidth = params['frame_width']
+        self.padVertical, self.padHorizontal = self._cal_padding(params['lip_padding'],  self.frameHeight, self.frameWidth)
+        self.aspectRatio = self.frameWidth/self.frameHeight
+        self.visualize = visualize
+        if self.visualize:
+            self.win = dlib.image_window()
+
+
+    def _cal_padding(self, pad_percent, height, width):
+        padVert = round(height * pad_percent / 100)
+        padHorz = round(width * pad_percent / 100)
+        return padVert, padHorz
+
+
+    def _normalize_bounds(self, x1, y1, x3, y3):
+        if x1 > x3:
+            x1, x3 = x3, x1
+        if y1 > y3:
+            y1, y3 = y3, y1
+        width = (x3 - x1)
+        height = (y3 - y1)
+        xcenter = x1 + width/2
+        ycenter = y1 + height/2
+        ratio = width/height
+        if ratio > self.aspectRatio:
+            # width is more, so the increase height
+            height = width/self.aspectRatio
+        elif ratio < self.aspectRatio:
+            # height is more, so increase width
+            width = height * self.aspectRatio
+        halfWidth = width/2 + self.padHorizontal
+        halfheight = height/2 + self.padVertical
+        x1 = round(xcenter - halfWidth)
+        x3 = round(xcenter + halfWidth)
+        y1 = round(ycenter - halfheight)
+        y3 = round(ycenter + halfheight)
+        return x1, y1, x3, y3
+
+
+    def extract_viseme(self, frame):
+        bbox = self.lipDetector.get_bbox(frame)
+        x1, y1, x3, y3 = bbox2points(bbox)
+        if self.visualize:
+            testFrame = add_rect(frame,x1,y1,x3,y3, (0, 255,0))
+        x1, y1, x3, y3 = self._normalize_bounds(x1, y1, x3, y3)
+        if self.visualize:
+            testFrame = add_rect(testFrame, x1, y1, x3, y3, (255, 0, 0))
+            self.win.set_image(testFrame)
+        lipImg = frame[y1:y3+1, x1:x3+1,:]
+        return lipImg
+    
+
+    def next_frame(self):
+        for frame in self.stream.nextFrame():
+            print('og',frame[0,0,0])
+            frame = self.force_to_rgb(frame)
+            print('rgb',frame[0,0,0])
+            viseme = self.extract_viseme(frame)
+            print('viseme',frame[0,0,0])
+            viseme = image_resize(viseme, self.frameHeight, self.frameWidth)
+            print('scaled',viseme[0,0,0])
+            return viseme
+        return None
+    
+    def __str__(self):
+        return VideoStream.__str__(self)
+

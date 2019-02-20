@@ -4,6 +4,8 @@
     "frame_length": 75,
     "frame_width": 100,
     "frame_height": 50,
+    "fps": 25,
+    "lip_padding": 10,
     "hdf5_data_list": "../dataset/*sentence*.hdf5",
     "generator_queue_size": 2, 
     "loss_func": "ctc_loss",
