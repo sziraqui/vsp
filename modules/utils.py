@@ -99,4 +99,18 @@ def parse_config(configFile):
             config['loss_func'] = {'ctc_loss': lambda y_true, y_pred: y_pred}
     except:
         pass
+    try:
+        config['video_list'] = path.abspath(path.join(rootdir, config['video_list']))
+        config['video_list'] = glob(config['video_list'])
+    except KeyError:
+        pass
+    try:
+        config['transcript_list'] = path.abspath(path.join(rootdir, config['transcript_list']))
+        config['transcript_list'] = glob(config['transcript_list'])
+    except KeyError:
+        pass
+    try:
+        config['cache_dir'] = path.abspath(path.join(rootdir, config['cache_dir']))
+    except KeyError:
+        pass
     return config
