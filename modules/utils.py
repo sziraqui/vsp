@@ -9,6 +9,8 @@ import json
 from glob import glob
 from os import path
 from PIL import Image
+from keras_preprocessing.text import tokenizer_from_json
+from keras.preprocessing.text import Tokenizer
 
 
 def timeNow():
@@ -63,6 +65,21 @@ def imshow(image):
 def image_resize(img, h, w):
     return np.array(Image.fromarray(img).resize((w,h), resample=Image.BICUBIC))
 
+'''
+    Get filename part of path without extension
+'''
+def get_filename(filepath):
+    return ''.join(path.basename(filepath).split('.')[:-1])
+
+
+def shuffle_together(X, Y, seed=-1):
+    if seed < 0:
+        seed = np.random.randint(0, 2**(32 - 1) - 1)
+    rstate = np.random.RandomState(seed)
+    rstate.shuffle(X)
+    rstate = np.random.RandomState(seed)
+    rstate.shuffle(Y)
+
 
 def parse_config(configFile):
     rootdir = path.abspath(path.dirname(configFile))
@@ -113,4 +130,45 @@ def parse_config(configFile):
         config['cache_dir'] = path.abspath(path.join(rootdir, config['cache_dir']))
     except KeyError:
         pass
+
+    try:
+        config['tokenizer'] = path.abspath(path.join(rootdir, config['tokenizer']))
+    except KeyError:
+        pass
     return config
+
+
+def load_tokenizer(file_path):
+    with open(file_path) as f:
+        js = json.dumps(json.load(f))
+        tokenizer = tokenizer_from_json(js)
+        return tokenizer
+
+
+def build_grid_tokenizer():
+    tokenizer = Tokenizer(oov_token="<unk>", filters='!"#$%&()*+.,-/:;=?@[\]^_`{|}~ ')
+    sp_tokens = ['<start>', '<end>', '<pad>', '<unk>']
+    commands = ['bin', 'lay', 'place', 'set']
+    colors = ['blue', 'green', 'red', 'white']
+    prepos = ['at', 'by', 'in', 'with']
+    letters = list('abcdefjhijklmnopqrstuvxyz') # 'w' is not present in grid
+    digits = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
+    adverbs = ['again', 'now', 'please', 'soon']
+    tokenizer.fit_on_texts(
+        sp_tokens + commands + colors + prepos + letters + digits + adverbs
+    )
+    
+    return tokenizer
+
+    '''
+        Assumming 'dirname/basename' part of file path is unique,
+        we use the filename to identify and link video and corresponding transcript file
+    '''
+def get_sample_ids(file_list):
+        
+    def path2id(filepath):
+        filename = get_filename(filepath)
+        directory = path.basename(path.dirname(filepath))
+        return path.join(directory, filename)
+    return list(map(path2id, file_list))
+
