@@ -95,19 +95,19 @@ class VideoStream(ImageStream):
     def __init__(self, sourcePath=None, params={}):
         ImageStream.__init__(self, sourcePath, params)
         self.name = "VideoStream"
-        self.sourcePath = sourcePath
+        self.stream = None
         try:
             self.fps = params['fps']
         except KeyError:
             self.fps = 25
-        self.set_source()
+        self.set_source(sourcePath)
     
 
-    def set_source(self):
-        if self.sourcePath != None and os.path.isfile(self.sourcePath):
+    def set_source(self, sourcePath):
+        if sourcePath != None and os.path.isfile(sourcePath):
             ffmpegInputOpt = {'-r': str(self.fps)}
             ffmpegOutputOpt = {'-r': str(self.fps)}
-            self.stream = FFmpegReader(self.sourcePath, inputdict=ffmpegInputOpt, outputdict=ffmpegOutputOpt)
+            self.stream = FFmpegReader(sourcePath, inputdict=ffmpegInputOpt, outputdict=ffmpegOutputOpt)
 
 
     def buffer_frames(self):
@@ -145,7 +145,7 @@ class TranscriptFileStream(StreamInterface):
 
     def set_source(self, sourcePath):
         self.sourcePath = sourcePath
-        self.buffer = []
+        self.transcriptLines = []
         with open(self.sourcePath, 'r') as f:
             for line in f.readlines():
                 self.transcriptLines.append(line.strip())
@@ -260,6 +260,7 @@ class WordStream(TranscriptFileStream):
 
 
     def buffer_frames(self):
+        self.buffer = []
         for line in self.transcriptLines:
             wordStart, wordEnd, word = extract_timestamps_and_word(line, self.timeFactor)
             if word not in self.ignoreList:
