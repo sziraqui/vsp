@@ -12,12 +12,8 @@ from .preprocessing import LipDetectorDlib
 import dlib
 
 class StreamInterface:
-    def __init__(self, params):
+    def __init__(self):
         self.buffer = []
-        try:
-            self.BUFFER_SIZE = params['frame_length']
-        except KeyError:
-            self.BUFFER_SIZE = 75
         self.lastIndex = -1
     def next_frame(self):
         raise NotImplementedError("Implement in subclass")
@@ -31,7 +27,12 @@ class StreamInterface:
 """
 class ImageStream(StreamInterface):
     def __init__(self, sourcePath=None, params={}):
-        StreamInterface.__init__(self, params)
+        StreamInterface.__init__(self)
+        try:
+            self.BUFFER_SIZE = params['frame_length']
+        except KeyError:
+            self.BUFFER_SIZE = 75
+        self.lastIndex = -1
         self.name = "ImageStream"
         self.sourcePath = sourcePath
         self.fileList = []
@@ -131,9 +132,10 @@ class TranscriptFileStream(StreamInterface):
     """
         ignoreList: list of word to be considered as silent portions of video
     """
-    def __init__(self, sourcePath=None, timeFactor=1, ignoreList=['']):
+    def __init__(self, sourcePath=None, buffer_size=75, timeFactor=1, ignoreList=['']):
         StreamInterface.__init__(self)
         self.name = "TranscriptFileStream"
+        self.BUFFER_SIZE = buffer_size
         self.transcriptLines = []
         self.timeFactor = timeFactor
         self.ignoreList = ignoreList
@@ -143,6 +145,7 @@ class TranscriptFileStream(StreamInterface):
 
     def set_source(self, sourcePath):
         self.sourcePath = sourcePath
+        self.buffer = []
         with open(self.sourcePath, 'r') as f:
             for line in f.readlines():
                 self.transcriptLines.append(line.strip())
@@ -160,7 +163,7 @@ class TranscriptFileStream(StreamInterface):
             self.lastIndex = self.BUFFER_SIZE - 1
     
 
-    def next_frame(self):
+    def next(self):
         if len(self.buffer) == 0:
             self.buffer_frames()
         self.lastIndex-=1
@@ -248,3 +251,23 @@ class VisemeStream(VideoStream):
     def __str__(self):
         return VideoStream.__str__(self)
 
+
+class WordStream(TranscriptFileStream):
+
+    def __init__(self, sourcePath=None, timeFactor=1, ignoreList=[]):
+        TranscriptFileStream.__init__(self, sourcePath, timeFactor=timeFactor, ignoreList=ignoreList)
+        self.name = "WordStream"
+
+
+    def buffer_frames(self):
+        for line in self.transcriptLines:
+            wordStart, wordEnd, word = extract_timestamps_and_word(line, self.timeFactor)
+            if word not in self.ignoreList:
+                self.buffer.append(word)
+    
+
+    def next(self):
+        if len(self.buffer) <= 0:
+            self.buffer_frames()
+        return self.buffer.pop(0)
+        
