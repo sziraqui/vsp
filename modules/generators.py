@@ -8,6 +8,7 @@ from copy import deepcopy
 from keras.utils import normalize
 from keras.preprocessing.text import Tokenizer 
 from keras.preprocessing.sequence import pad_sequences
+from tqdm import tqdm
 
 from .framestream import VisemeStream, TranscriptFileStream, WordStream
 from .textprocessing import word2ints
@@ -153,7 +154,7 @@ class OnlineGridBatch(GeneratorInterface):
 
         self.sampleIndex = 0 # current sample index in self.ids
         self.tokenizer = load_tokenizer(config['tokenizer'])
-        self.vs = VisemeStream(params=config, visualize=True)
+        self.vs = VisemeStream(params=config)
         self.ws = WordStream(timeFactor=transcript_time_factor, ignoreList=transcript_ignore_list)
     
 
@@ -168,12 +169,13 @@ class OnlineGridBatch(GeneratorInterface):
                     if visemes is None:
                         visemes = self.load_from_disk(self.ids[self.sampleIndex + i])
                         self.save_to_cache(self.ids[self.sampleIndex + i], visemes)
+                    
                     sentences.append(self.load_transcript(self.ids[self.sampleIndex + i]))
                     
                 except Exception as e:
                     Log.error(repr(e) + 'Error processing sample ' + self.ids[self.sampleIndex + i])
                 i+=1
-            
+                print('batch', len(sentences), '/', batchSize)
             sequences = self.tokenizer.texts_to_sequences(sentences)
             Y = pad_sequences(sequences, value=self.tokenizer.word_index['<pad>'], maxlen=self.seqLen, 
                             dtype='uint8', padding='post', truncating='post')
@@ -188,7 +190,6 @@ class OnlineGridBatch(GeneratorInterface):
 
    
     def load_from_cache(self, id):
-        print('cached:', id)
         try:
             with h5py.File(path.join(self.cache, id + '.h5')) as f:
                 viseme = f["feature"][:]
@@ -201,7 +202,6 @@ class OnlineGridBatch(GeneratorInterface):
     
 
     def load_from_disk(self, id):
-        print('video:', id)
         self.vs.set_source(path.join(self.videoDir, id + '.' + self.videoExt))
         visemes = []
         frame = self.vs.next_frame()
@@ -212,12 +212,10 @@ class OnlineGridBatch(GeneratorInterface):
 
     
     def load_transcript(self, id):
-        print('text:', id)
         self.ws.set_source(path.join(self.textDir, id + '.' + self.textExt))
         self.ws.buffer_frames()
         words = self.ws.buffer
-        print('words:',words)
-        return ['<start>'] + words + ['end']
+        return ['<start>'] + words + ['<end>']
 
     
     def save_to_cache(self, id, visemes):
