@@ -227,7 +227,7 @@ class VisemeStream(VideoStream):
         return x1, y1, x3, y3
 
     
-    def extract_viseme(self, frame):
+    def extract_viseme(self, frame, include_rect=False):
         bbox = self.lipDetector.get_bbox(frame)
         x1, y1, x3, y3 = bbox2points(bbox)
         if self.visualize:
@@ -237,16 +237,33 @@ class VisemeStream(VideoStream):
             testFrame = add_rect(testFrame, x1, y1, x3, y3, (255, 0, 0))
             self.win.set_image(testFrame)
         lipImg = frame[y1:y3+1, x1:x3+1,:]
-        return lipImg
+        if include_rect:
+            return lipImg, (x1,y1,x3,y3)
+        else:
+            return lipImg
     
 
-    def next_frame(self):
+    def next_frame(self, include_original_frame=False, include_rect=False):
         for frame in self.stream.nextFrame():
-            frame = self.force_to_rgb(frame)
-            viseme = self.extract_viseme(frame)
+            rgbFrame = self.force_to_rgb(frame)
+            viseme, rect = None, None
+            if include_rect:
+                viseme, rect = self.extract_viseme(rgbFrame, include_rect=True)
+            else:
+                viseme = self.extract_viseme(rgbFrame)
             viseme = image_resize(viseme, self.frameHeight, self.frameWidth)
-            return viseme
-        return None
+            if include_original_frame and include_rect:
+                return viseme, rgbFrame, rect
+            elif include_original_frame:
+                return viseme, rgbFrame
+            else:
+                return viseme
+        if include_original_frame and include_rect:
+            return None, None, None
+        elif include_original_frame:
+            return None, None
+        else:
+            return None
     
     def __str__(self):
         return VideoStream.__str__(self)
