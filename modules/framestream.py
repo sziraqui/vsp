@@ -191,12 +191,24 @@ class VisemeStream(VideoStream):
         self.visualize = visualize
         if self.visualize:
             self.win = dlib.image_window()
+        self.lastRect = None # initalized in next_frame()
 
 
     def _cal_padding(self, pad_percent, height, width):
         padVert = round(height * pad_percent / 100)
         padHorz = round(width * pad_percent / 100)
         return padVert, padHorz
+
+
+    def _default_rect(self, parentWidth, parentHeight):
+        xcenter = parentWidth/2
+        ycenter = parentHeight/2
+        x1 = round(xcenter - self.frameWidth/2)
+        x3 = round(xcenter + self.frameWidth/2)
+        y1 = round(ycenter - self.frameHeight/2)
+        y3 = round(ycenter + self.frameHeight/2)
+        return (x1,y1,x3,y3)
+    
 
     '''
         Transforms coordinates such that the aspect ratio
@@ -228,17 +240,30 @@ class VisemeStream(VideoStream):
 
     
     def extract_viseme(self, frame, include_rect=False):
-        bbox = self.lipDetector.get_bbox(frame)
-        x1, y1, x3, y3 = bbox2points(bbox)
+        rect = None
+        if self.lastRect is None:
+                self.lastRect = self._default_rect(frame.shape[1], frame.shape[0])
+        try:
+            bbox = self.lipDetector.get_bbox(frame) # throws IndexError when no faces are detected
+            x1, y1, x3, y3 = bbox2points(bbox)
+            rect = self._normalize_bounds(x1, y1, x3, y3)
+        except:
+            # Position of bbox changes only slightly in consecutive frames
+            rect = self.lastRect # lets use last bbox in case no face was detected
+        
+        x1,y1,x3,y3 = rect
         if self.visualize:
             testFrame = add_rect(frame,x1,y1,x3,y3, (0, 255,0))
-        x1, y1, x3, y3 = self._normalize_bounds(x1, y1, x3, y3)
+        
+        self.lastRect = rect
+        
         if self.visualize:
             testFrame = add_rect(testFrame, x1, y1, x3, y3, (255, 0, 0))
             self.win.set_image(testFrame)
+        
         lipImg = frame[y1:y3+1, x1:x3+1,:]
         if include_rect:
-            return lipImg, (x1,y1,x3,y3)
+            return lipImg, rect
         else:
             return lipImg
     

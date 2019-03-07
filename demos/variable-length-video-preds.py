@@ -77,10 +77,7 @@ while (currViseme is not None):
         print(pred)
     else:
         print()
-    try:
-        currViseme, currFrame, rect = vs.next_frame(include_original_frame=True, include_rect=True)
-    except IndexError:
-        rect = (0,0,0,0)
     vidOut.writeFrame(annotatedFrame)
+    currViseme, currFrame, rect = vs.next_frame(include_original_frame=True, include_rect=True)
 
 vidOut.close()
