@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+	<div class="container-fluid" style="border:1px solid #cecece; align-self: center; margin-left: 50px;width: 600px;position:fixed;
+    top: 25%;
+    left: 25%; ">
+		<form action="http://localhost:5000/" method="POST" style="padding: 20px;" enctype="multipart/form-data">
+  		<div class="form-group">
+    		<h3><label for="email">Don't say it, just lips it!</label></h3>
+    		<input type="file" class="form-control" id="file" name="file" style="width: 250px">
+  		</div>
+ 
+  		<button type="submit" class="btn btn-default" >Submit</button><br>
+	<a href="http://localhost:5000/process" style="align-self: center;">LogIn</a>  		
+	</form>
+		
+	</div>
+	
+	 
+
+
+	<p>
+		{{ data }}
+	</p>
+
+
+
+{% endblock content%}
