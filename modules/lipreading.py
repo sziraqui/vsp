@@ -204,9 +204,12 @@ class SentenceReader(WordReader):
     def __str__(self):
         return f"{self.name:\n}Model Summary:  {self.model.summary()}"
 
+
 """
     Eager execution must be enabled to use this class
 """
+
+
 class VSPNet:
     """
         VSPNet constructor
@@ -228,6 +231,7 @@ class VSPNet:
         self.vocabSize = len(tokeniser.word_index)
         self.gruUnits = params.get('gru_units', 256)
         self.embeddingDim = params.get('embedding_dim', 50)
+        self.maxTargetLen = params.get('max_target_len', 32)
 
         self.batchSize = params.get('batch_size', 1)
         self.sampleSize = params.get('sample_size', 1)
@@ -236,8 +240,10 @@ class VSPNet:
 
         self.create_model(params)
         if params['resume']:
-            self.checkpointDir = os.path.join(params['checkpoint_dir'], self.name)
-            self.checkpoint.restore(tf.train.latest_checkpoint(checkpointDir)).assert_consumed()
+            self.checkpointDir = os.path.join(
+                params['checkpoint_dir'], self.name)
+            self.checkpoint.restore(tf.train.latest_checkpoint(
+                checkpointDir)).assert_consumed()
 
     def create_model(self, params):
 
@@ -248,11 +254,11 @@ class VSPNet:
         self.checkpoint = tf.train.Checkpoint(
             encoder=self.encoder, decoder=self.decoder, optimizer=self.optimizer)
 
-
     def _train(self, Xtrain, decoderInputData, trainParams):
         BUFFER_SIZE = trainParams['generator_queue_size']
         N_BATCH = BUFFER_SIZE/self.batchSize
-        dataset = tf.data.Dataset.from_tensor_slices((Xtrain, decoderInputData)).shuffle(BUFFER_SIZE)
+        dataset = tf.data.Dataset.from_tensor_slices(
+            (Xtrain, decoderInputData)).shuffle(BUFFER_SIZE)
         dataset = dataset.batch(self.batchSize, drop_remainder=True)
 
         loss_plot = []
@@ -262,24 +268,28 @@ class VSPNet:
             start = time.time()
             hidden = self.encoder.initialize_hidden_state()
             total_loss = 0
-            epoch_accuracy = tf.contrib.eager.metrics.Accuracy() #accuracy #Change here for without Nightly
+            # accuracy #Change here for without Nightly
+            epoch_accuracy = tf.contrib.eager.metrics.Accuracy()
 
             for (batch, (img_tensor, target)) in enumerate(dataset):
                 loss = 0
 
-                pred_list=[]#accuracy
+                pred_list = []  # accuracy
                 with tf.GradientTape() as tape:
                     enc_output, enc_hidden = self.encoder(img_tensor, hidden)
 
                     dec_hidden = enc_hidden
 
-                    dec_input = tf.expand_dims([self.tokenizer.word_index['<start>']] * self.batchSize, 1)       
+                    dec_input = tf.expand_dims(
+                        [self.tokenizer.word_index['<start>']] * self.batchSize, 1)
 
                     # Teacher forcing - feeding the target as the next input
                     for t in range(1, target.shape[1]):
                         # passing enc_output to the decoder
-                        predictions, dec_hidden, _ = self.decoder(dec_input, dec_hidden, enc_output)
-                        pred_list.append(tf.argmax(predictions, axis=1, output_type=tf.int32))#accuracy
+                        predictions, dec_hidden, _ = self.decoder(
+                            dec_input, dec_hidden, enc_output)
+                        pred_list.append(
+                            tf.argmax(predictions, axis=1, output_type=tf.int32))  # accuracy
 
                         loss += loss_function(target[:, t], predictions)
 
@@ -290,62 +300,66 @@ class VSPNet:
 
                 variables = self.encoder.variables + self.decoder.variables
 
-                gradients = tape.gradient(loss, variables) 
+                gradients = tape.gradient(loss, variables)
 
-                self.optimizer.apply_gradients(zip(gradients, variables))#, tf.train.get_or_create_global_step()
+                # , tf.train.get_or_create_global_step()
+                self.optimizer.apply_gradients(zip(gradients, variables))
 
-                epoch_accuracy(np.asarray(pred_list).T, target[:,1:]) #accuracy
+                epoch_accuracy(np.asarray(pred_list).T,
+                               target[:, 1:])  # accuracy
 
                 if batch % 100 == 0:
-                    print ('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1, 
-                                                                  batch, 
-                                                                  loss.numpy() / int(target.shape[1])))
+                    print('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,
+                                                                 batch,
+                                                                 loss.numpy() / int(target.shape[1])))
             # storing the epoch end loss value to plot later
             loss_plot.append(total_loss / N_BATCH)
             train_accuracy_results.append(epoch_accuracy.result())
 
             # saving (checkpoint) the model every 2 epochs
-            #if (epoch + 1) % 2 == 0:
-              #checkpoint.save(file_prefix = checkpoint_prefix)
+            # if (epoch + 1) % 2 == 0:
+            #checkpoint.save(file_prefix = checkpoint_prefix)
 
-            print ('Epoch {} Loss {:.6f}, Accuracy: {:.3%}'.format(epoch + 1, 
-                                                                   total_loss/N_BATCH,
-                                                                   epoch_accuracy.result()))#accuracy
-            print ('Time taken for 1 epoch {} sec\n'.format(time.time() - start))        
+            print('Epoch {} Loss {:.6f}, Accuracy: {:.3%}'.format(epoch + 1,
+                                                                  total_loss/N_BATCH,
+                                                                  epoch_accuracy.result()))  # accuracy
+            print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
+        self.loss_list = loss_plot
+        self.accuracy = train_accuracy_results
 
     def train_model(self, xtrain, ytrain, trainParams):
-        
+
         try:
             self._train(xtrain, ytrain, trainParams)
         except InterruptedError:
             self.checkpoint.save(self.checkpointDir)
             Log.error("Training interrupted. Checkpoint saved")
-            
 
     def train_with_generator(self, trainParams=None, generator=None):
-       raise NotImplementedError("Training using generator not implemented yet")
+        raise NotImplementedError(
+            "Training using generator not implemented yet")
 
     def test_model(self, xtest, ytest, testParams):
         lossPercent, accuracy = self.evaluate(xtest, ytest)
         return lossPercent, accuracy
 
-    def predict_raw(self, img_tensor):
-        hidden = [tf.zeros((1, units))] #?
-        img_tensor=tf.convert_to_tensor(img_tensor)
-        img_tensor=tf.expand_dims(img_tensor, 0) #start?
+    def predict_raw(self, frames):
+        hidden = [tf.zeros((1, units))]  # ?
+        img_tensor = tf.convert_to_tensor(frames)
+        img_tensor = tf.expand_dims(img_tensor, 0)  # start?
         enc_out, enc_hidden = self.encoder(img_tensor, hidden)
 
         dec_input = tf.expand_dims([self.tokenizer.word_index['<start>']], 0)
-        dec_hidden = enc_hidden #?
+        dec_hidden = enc_hidden  # ?
 
-        result = ''
+        result = []
 
-        for i in range(max_length_targ):
-            predictions, dec_hidden, attention_weights = self.decoder(dec_input, dec_hidden, enc_out)
+        for i in range(self.maxTargetLen):
+            predictions, dec_hidden, attention_weights = self.decoder(
+                dec_input, dec_hidden, enc_out)
 
             predicted_id = tf.argmax(predictions[0]).numpy()
-            result += tokenizer.index_word[predicted_id] + ' '
-
+            result.append(self.tokenizer.index_word[predicted_id])
 
             if tokenizer.index_word[predicted_id] == '<end>':
                 return result
@@ -353,3 +367,6 @@ class VSPNet:
             dec_input = tf.expand_dims([predicted_id], 0)
 
         return result
+
+    def predict_sentence(self, frames):
+        return ' '.join(predict_raw(frames))
