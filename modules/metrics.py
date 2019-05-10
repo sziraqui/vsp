@@ -13,3 +13,10 @@ def ctc_lambda_func(args):
 
 def CTC(args, name=CTC_LOSS_STR):
 	return Lambda(ctc_lambda_func, output_shape=(1,), name=name)(args)
+
+# We are masking the loss calculated for padding
+def vspnet_loss(real, pred):
+    mask = 1 - np.equal(real, 0)
+    loss_ = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=real, logits=pred) * mask
+    return tf.reduce_mean(loss_)
+    

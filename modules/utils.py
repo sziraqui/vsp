@@ -135,6 +135,12 @@ def parse_config(configFile):
         config['tokenizer'] = path.abspath(path.join(rootdir, config['tokenizer']))
     except KeyError:
         pass
+
+    try:
+        config['checkpoint_dir'] = path.abspath(path.join(rootdir, config['checkpoint_dir']))
+    except KeyError:
+        pass
+
     return config
 
 
