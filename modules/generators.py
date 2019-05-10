@@ -192,7 +192,7 @@ class OnlineGridBatch(GeneratorInterface):
     def load_from_cache(self, id):
         try:
             with h5py.File(path.join(self.cache, id + '.h5')) as f:
-                viseme = f["feature"][:]
+                viseme = f["features"][:]
                 if viseme.shape != self.inputShape:
                     return None
                 else:
