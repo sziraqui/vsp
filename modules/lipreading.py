@@ -227,8 +227,8 @@ class VSPNet:
         self.frameWidth = params.get('frame_width', 100)
         self.frameHeight = params.get('frame_height', 50)
 
-        self.tokeniser = load_tokeniser(params['tokeniser'])
-        self.vocabSize = len(tokeniser.word_index)
+        self.tokenizer = load_tokenizer(params['tokenizer'])
+        self.vocabSize = len(self.tokenizer.word_index)
         self.gruUnits = params.get('gru_units', 256)
         self.embeddingDim = params.get('embedding_dim', 50)
         self.maxTargetLen = params.get('max_target_len', 32)
@@ -243,7 +243,7 @@ class VSPNet:
             self.checkpointDir = os.path.join(
                 params['checkpoint_dir'], self.name)
             self.checkpoint.restore(tf.train.latest_checkpoint(
-                checkpointDir)).assert_consumed()
+                self.checkpointDir))#.assert_consumed()
 
     def create_model(self, params):
 
@@ -344,8 +344,12 @@ class VSPNet:
         return lossPercent, accuracy
 
     def predict_raw(self, frames):
-        hidden = [tf.zeros((1, units))]  # ?
-        img_tensor = tf.convert_to_tensor(frames)
+        X_train = np.asarray(frames)
+        X_train = X_train.astype('float32')
+        X_train /= 255
+        print('xtrain shape:', X_train.shape)
+        hidden = [tf.zeros((1, self.gruUnits))]  # ?
+        img_tensor = tf.convert_to_tensor(X_train)
         img_tensor = tf.expand_dims(img_tensor, 0)  # start?
         enc_out, enc_hidden = self.encoder(img_tensor, hidden)
 
@@ -361,7 +365,7 @@ class VSPNet:
             predicted_id = tf.argmax(predictions[0]).numpy()
             result.append(self.tokenizer.index_word[predicted_id])
 
-            if tokenizer.index_word[predicted_id] == '<end>':
+            if self.tokenizer.index_word[predicted_id] == '<end>':
                 return result
 
             dec_input = tf.expand_dims([predicted_id], 0)
@@ -369,4 +373,4 @@ class VSPNet:
         return result
 
     def predict_sentence(self, frames):
-        return ' '.join(predict_raw(frames))
+        return ' '.join(self.predict_raw(frames))

@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+import sys
+import os
+sys.path.insert(0, os.path.abspath('..'))
+import tensorflow as tf
+tf.enable_eager_execution()
+print('Tensorflow version:', tf.__version__)
 from modules.utils import add_rect, image_resize
 from modules.lipreading import VSPNet
 from modules.utils import parse_config
@@ -7,9 +13,6 @@ from skvideo.io import FFmpegWriter
 from PIL import Image, ImageDraw, ImageFont
 import dlib
 import numpy as np
-import os
-import sys
-sys.path.insert(0, os.path.abspath('..'))
 
 
 def annotate_frame(frame, viseme_list, rect, text, size=(640, 480)):
@@ -52,7 +55,7 @@ def insert_viseme_window(frame, viseme_list):
 config = parse_config(sys.argv[1])
 vidPath = sys.argv[2]
 
-sr = SentenceReader(config)
+sr = VSPNet(config)
 vs = VisemeStream(vidPath, config)
 vidOut = FFmpegWriter(os.path.join(os.path.abspath(
     '..'), 'out_viseme_' + os.path.basename(vidPath)))
@@ -71,6 +74,7 @@ win = dlib.image_window()
 while (currViseme is not None):
     annotatedFrame = annotate_frame(
         currFrame, viseme_list[::-1][:10], rect, currText)
+    
     win.set_image(annotatedFrame)
     if len(viseme_list) >= frameWindow.shape[0]:
         viseme_list.pop(0)
@@ -80,12 +84,14 @@ while (currViseme is not None):
     if frameNo % (max(round(inFps/outFps), 1)) == 0:
         frameWindow[:len(viseme_list)] = np.array(viseme_list)
         pred = sr.predict_sentence(frameWindow)
-        currText = pred.replace('_', ' ')
+        currText = pred#.replace('_', ' ')
         print(pred)
     else:
         print()
     vidOut.writeFrame(annotatedFrame)
     currViseme, currFrame, rect = vs.next_frame(
         include_original_frame=True, include_rect=True)
-
+with open(os.path.join(os.path.abspath(
+    '..'), 'out_viseme_' + os.path.basename(vidPath)).split('.')[0], 'w') as f:
+    print(pred, file=f)
 vidOut.close()
